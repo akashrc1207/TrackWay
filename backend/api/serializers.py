@@ -18,3 +18,14 @@ class DriverSerializer(serializers.ModelSerializer):
     class Meta:
         model = Driver
         fields = "__all__"
+
+class BusStopSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BusStop
+        fields = "__all__"
+
+
+class GPSLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GPSLog
+        fields = "__all__"        

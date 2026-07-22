@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Route(models.Model):
@@ -30,11 +31,10 @@ class BusStop(models.Model):
     def __str__(self):
         return self.stop_name
 
+
 class Driver(models.Model):
-    name = models.CharField(max_length=100)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15, unique=True)
-    email = models.EmailField(unique=True)
-    license_number = models.CharField(max_length=30, unique=True)
     assigned_bus = models.OneToOneField(
         Bus,
         on_delete=models.SET_NULL,
@@ -43,7 +43,8 @@ class Driver(models.Model):
     )
 
     def __str__(self):
-        return self.name
+        return self.user.get_full_name() or self.user.username
+
 
 class GPSLog(models.Model):
     bus = models.ForeignKey(Bus, on_delete=models.CASCADE)
