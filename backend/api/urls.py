@@ -10,4 +10,6 @@ urlpatterns = [
     path("gps/update/", views.gps_update, name="gps-update"),
     path("gps/latest/<int:bus_id>/", views.latest_gps, name="latest-gps"),
     path("gps/latest/<int:bus_id>/", views.latest_gps, name="latest-gps"),
+    path("routes/<int:route_id>/details/", views.route_details, name="route-details"),
+    path("search/", views.search_bus, name="search-bus"),
 ]

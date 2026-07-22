@@ -14,18 +14,34 @@ class BusSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class DriverSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Driver
-        fields = "__all__"
-
 class BusStopSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusStop
         fields = "__all__"
 
 
+class DriverSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Driver
+        fields = "__all__"
+
+
 class GPSLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = GPSLog
-        fields = "__all__"        
+        fields = "__all__"
+
+
+class RouteDetailSerializer(serializers.ModelSerializer):
+    stops = BusStopSerializer(source="busstop_set", many=True)
+
+    class Meta:
+        model = Route
+        fields = (
+            "id",
+            "route_name",
+            "start_location",
+            "end_location",
+            "total_distance",
+            "stops",
+        )
