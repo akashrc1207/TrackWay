@@ -27,9 +27,13 @@ class BusStop(models.Model):
     latitude = models.FloatField()
     longitude = models.FloatField()
     route = models.ForeignKey(Route, on_delete=models.CASCADE)
+    stop_order = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ['stop_order']
 
     def __str__(self):
-        return self.stop_name
+        return f"{self.stop_order}. {self.stop_name}"
 
 
 class Driver(models.Model):
@@ -45,9 +49,26 @@ class Driver(models.Model):
     def __str__(self):
         return self.user.get_full_name() or self.user.username
 
+class Journey(models.Model):
+    bus = models.ForeignKey(Bus, on_delete=models.CASCADE)
+    driver = models.ForeignKey(Driver, on_delete=models.CASCADE)
+
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.bus.bus_number} - {self.start_time}"
 
 class GPSLog(models.Model):
     bus = models.ForeignKey(Bus, on_delete=models.CASCADE)
+    journey = models.ForeignKey(
+    Journey,
+    on_delete=models.CASCADE,
+    null=True,
+    blank=True
+)
     latitude = models.FloatField()
     longitude = models.FloatField()
     speed = models.FloatField()

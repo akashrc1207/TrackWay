@@ -1,18 +1,24 @@
-# Python
+# Python & Django
 __pycache__/
 *.py[cod]
-
-# Virtual Environment
 backend/venv/
-
-# Database
 backend/db.sqlite3
 
-# VS Code
+# Flutter
+trackway_app/.dart_tool/
+trackway_app/.flutter-plugins
+trackway_app/.flutter-plugins-dependencies
+trackway_app/.pub-cache/
+trackway_app/.pub/
+trackway_app/build/
+flutter_app_old/
+
+# IDE & Editor
 .vscode/
+.idea/
+*.iml
 
-# Environment Variables
+# Environment Variables & OS
 .env
-
-# macOS
 .DS_Store
+Thumbs.db

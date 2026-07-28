@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Route, Bus, BusStop, Driver, GPSLog
+from .models import Route, Bus, BusStop, Driver, GPSLog, Journey
 
 
 class RouteSerializer(serializers.ModelSerializer):
@@ -9,6 +9,10 @@ class RouteSerializer(serializers.ModelSerializer):
 
 
 class BusSerializer(serializers.ModelSerializer):
+    route_name = serializers.CharField(source="route.route_name", read_only=True)
+    start_location = serializers.CharField(source="route.start_location", read_only=True)
+    end_location = serializers.CharField(source="route.end_location", read_only=True)
+
     class Meta:
         model = Bus
         fields = "__all__"
@@ -31,6 +35,10 @@ class GPSLogSerializer(serializers.ModelSerializer):
         model = GPSLog
         fields = "__all__"
 
+class JourneySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Journey
+        fields = "__all__"
 
 class RouteDetailSerializer(serializers.ModelSerializer):
     stops = BusStopSerializer(source="busstop_set", many=True)
