@@ -1,0 +1,76 @@
+{
+    "model_version": "V5",
+    "task": "next_stop_eta_prediction",
+    "target": "target_eta_seconds",
+    "target_unit": "seconds",
+    "window_seconds": 60,
+    "resample_seconds": 5,
+    "timesteps": 13,
+    "num_features": 17,
+    "input_shape": [
+        13,
+        17
+    ],
+    "feature_names": [
+        "speed_mps",
+        "accuracy_m",
+        "rolling_speed_30s",
+        "rolling_speed_60s",
+        "progress_speed_30s",
+        "progress_speed_60s",
+        "is_stopped",
+        "is_very_slow",
+        "is_slow",
+        "is_stopped_30s",
+        "is_very_slow_30s",
+        "is_slow_30s",
+        "is_stopped_60s",
+        "is_very_slow_60s",
+        "is_slow_60s",
+        "direction_code",
+        "distance_to_next_stop_m"
+    ],
+    "continuous_features_scaled": [
+        "speed_mps",
+        "accuracy_m",
+        "rolling_speed_30s",
+        "rolling_speed_60s",
+        "progress_speed_30s",
+        "progress_speed_60s",
+        "distance_to_next_stop_m"
+    ],
+    "continuous_feature_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        16
+    ],
+    "binary_features_unscaled": [
+        "is_stopped",
+        "is_very_slow",
+        "is_slow",
+        "is_stopped_30s",
+        "is_very_slow_30s",
+        "is_slow_30s",
+        "is_stopped_60s",
+        "is_very_slow_60s",
+        "is_slow_60s"
+    ],
+    "direction_feature": "direction_code",
+    "distance_feature": "distance_to_next_stop_m",
+    "training_journeys": [
+        "Akash_forward",
+        "Akash_return",
+        "Famil_forward"
+    ],
+    "validation_journeys": [
+        "Famil_return"
+    ],
+    "final_test_journeys": [
+        "Joseph_forward",
+        "Joseph_return"
+    ]
+}

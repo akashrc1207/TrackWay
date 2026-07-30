@@ -13,10 +13,10 @@ class GpsLocation {
 
   factory GpsLocation.fromJson(Map<String, dynamic> json) {
     return GpsLocation(
-      latitude: double.parse(json["latitude"].toString()),
-      longitude: double.parse(json["longitude"].toString()),
-      speed: double.parse(json["speed"].toString()),
-      timestamp: json["timestamp"],
+      latitude: (json["latitude"] as num? ?? 0.0).toDouble(),
+      longitude: (json["longitude"] as num? ?? 0.0).toDouble(),
+      speed: (json["speed"] as num? ?? 0.0).toDouble(),
+      timestamp: (json["timestamp"] as String?) ?? "",
     );
   }
 }

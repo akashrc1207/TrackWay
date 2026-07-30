@@ -111,7 +111,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 child: const Icon(Icons.directions_bus, color: Colors.blue),
                               ),
                               title: Text(
-                                bus.busNumber,
+                                bus.displayName,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 18,

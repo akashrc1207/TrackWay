@@ -53,7 +53,11 @@ def gps_list(request):
 
 @api_view(["GET"])
 def latest_gps(request, bus_id):
-    gps = GPSLog.objects.filter(bus_id=bus_id).order_by("-timestamp").first()
+    active_journey = Journey.objects.filter(bus_id=bus_id, is_active=True).order_by("-id").first()
+    if active_journey:
+        gps = GPSLog.objects.filter(bus_id=bus_id, journey=active_journey).order_by("-id").first()
+    else:
+        gps = GPSLog.objects.filter(bus_id=bus_id).order_by("-id").first()
 
     if gps is None:
         return Response(
@@ -102,7 +106,17 @@ def gps_update(request):
 def route_details(request, route_id):
     route = get_object_or_404(Route, id=route_id)
     serializer = RouteDetailSerializer(route)
-    return Response(serializer.data)  
+    data = dict(serializer.data)
+
+    # Load dense road geometry polyline
+    import os, json
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    polyline_file = os.path.join(base_dir, "ml_models", "road_polyline.json")
+    if os.path.exists(polyline_file):
+        with open(polyline_file, "r") as f:
+            data["road_polyline"] = json.load(f)
+
+    return Response(data)  
 
 @api_view(["GET"])
 def search_bus(request):
@@ -231,6 +245,7 @@ def login_driver(request):
         "username": user.username,
         "driver_id": driver.id,
         "bus_id": driver.assigned_bus.id if driver.assigned_bus else None,
+        "bus_name": driver.assigned_bus.bus_name if driver.assigned_bus else "",
         "bus_number": driver.assigned_bus.bus_number if driver.assigned_bus else None,
         "active_journey_id": active_journey.id if active_journey else None,
     })
@@ -239,7 +254,11 @@ def login_driver(request):
 @api_view(["GET"])
 def get_bus_eta(request, bus_id):
     bus = get_object_or_404(Bus, id=bus_id)
-    latest_log = GPSLog.objects.filter(bus=bus).order_by("-timestamp").first()
+    active_journey = Journey.objects.filter(bus=bus, is_active=True).order_by("-id").first()
+    if active_journey:
+        latest_log = GPSLog.objects.filter(bus=bus, journey=active_journey).order_by("-id").first()
+    else:
+        latest_log = GPSLog.objects.filter(bus=bus).order_by("-id").first()
 
     if not latest_log:
         return Response(
@@ -257,6 +276,7 @@ def get_bus_eta(request, bus_id):
             current_speed_kmh=latest_log.speed,
             target_lat=stop.latitude,
             target_lng=stop.longitude,
+            target_stop_order=stop.stop_order,
         )
         eta_results.append({
             "stop_id": stop.id,
@@ -269,6 +289,7 @@ def get_bus_eta(request, bus_id):
 
     return Response({
         "bus_id": bus.id,
+        "bus_name": bus.bus_name,
         "bus_number": bus.bus_number,
         "route_id": bus.route.id,
         "route_name": bus.route.route_name,

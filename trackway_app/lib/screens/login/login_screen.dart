@@ -92,7 +92,7 @@ class LoginScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
-                      "Welcome Commuter",
+                      "Welcome",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 22,
@@ -125,7 +125,7 @@ class LoginScreen extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.directions_bus_filled_rounded),
                       label: const Text(
-                        "Passenger Mode",
+                        "Passenger",
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       onPressed: () {

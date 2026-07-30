@@ -5,6 +5,8 @@ import '../../services/api_service.dart';
 import '../search/search_screen.dart';
 import '../tracking/tracking_screen.dart';
 import 'route_details_screen.dart';
+import 'nearby_stops_screen.dart';
+import 'saved_routes_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -237,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: const Icon(Icons.directions_bus_rounded, color: AppTheme.primaryEmerald),
                             ),
                             title: Text(
-                              bus.busNumber,
+                              bus.displayName,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -296,6 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 MaterialPageRoute(
                                   builder: (_) => RouteDetailsScreen(
                                     busId: bus.id,
+                                    busName: bus.busName,
                                     busNumber: bus.busNumber,
                                     routeId: bus.route,
                                     status: bus.status,
@@ -334,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const SearchScreen()),
+                              MaterialPageRoute(builder: (_) => const NearbyStopsScreen()),
                             );
                           },
                         ),
@@ -368,7 +371,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const SearchScreen()),
+                              MaterialPageRoute(builder: (_) => const SavedRoutesScreen()),
                             );
                           },
                         ),
@@ -388,51 +391,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ],
-                  ),
-
-                  const SizedBox(height: 26),
-
-                  // Nearby Major Stations
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Major Bus Terminals",
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          "See All",
-                          style: TextStyle(color: AppTheme.primaryEmerald, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  const CommuterStationTile(
-                    title: "Oduvallithattu Bus Stand",
-                    subtitle: "Central Route Junction",
-                    distance: "250 m",
-                    availableRoutes: "14 Buses",
-                  ),
-                  const CommuterStationTile(
-                    title: "Karuvanchal Station",
-                    subtitle: "Express Route Line",
-                    distance: "1.1 km",
-                    availableRoutes: "9 Buses",
-                  ),
-                  const CommuterStationTile(
-                    title: "Alakode Terminal",
-                    subtitle: "Main Road Hub",
-                    distance: "2.3 km",
-                    availableRoutes: "18 Buses",
                   ),
                 ],
               ),

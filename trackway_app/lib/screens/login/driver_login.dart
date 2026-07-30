@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../config/app_theme.dart';
 import '../../services/api_service.dart';
 import '../driver/driver_dashboard.dart';
 
@@ -14,6 +16,46 @@ class _DriverLoginState extends State<DriverLogin> {
   final TextEditingController _passwordController = TextEditingController();
   final ApiService _apiService = ApiService();
   bool _isLoading = false;
+  bool _rememberMe = true;
+  bool _isCheckingAutoLogin = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAutoLogin();
+  }
+
+  Future<void> _checkAutoLogin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isRemembered = prefs.getBool("remember_driver") ?? false;
+      final savedToken = prefs.getString("token");
+      final savedUsername = prefs.getString("username");
+
+      if (savedUsername != null && savedUsername.isNotEmpty) {
+        _usernameController.text = savedUsername;
+      }
+
+      if (isRemembered && savedToken != null && savedToken.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const DriverDashboard()),
+            );
+          }
+        });
+        return;
+      }
+    } catch (e) {
+      debugPrint("Auto-login error: $e");
+    }
+
+    if (mounted) {
+      setState(() {
+        _isCheckingAutoLogin = false;
+      });
+    }
+  }
 
   Future<void> _handleLogin() async {
     final username = _usernameController.text.trim();
@@ -34,6 +76,10 @@ class _DriverLoginState extends State<DriverLogin> {
     setState(() => _isLoading = false);
 
     if (result != null && result.containsKey("token")) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool("remember_driver", _rememberMe);
+
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const DriverDashboard()),
       );
@@ -56,58 +102,104 @@ class _DriverLoginState extends State<DriverLogin> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isCheckingAutoLogin) {
+      return Scaffold(
+        backgroundColor: AppTheme.bgMint,
+        body: const Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryEmerald),
+        ),
+      );
+    }
+
     return Scaffold(
+      backgroundColor: AppTheme.bgMint,
       appBar: AppBar(
-        title: const Text("Driver Portal Login"),
-        centerTitle: true,
+        backgroundColor: AppTheme.bgMint,
+        elevation: 0,
+        title: const Text("Driver Portal Login", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 20),
-            const Icon(Icons.directions_bus_rounded, size: 80, color: Colors.blue),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.mintContainer,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.directions_bus_rounded, size: 64, color: AppTheme.primaryEmerald),
+            ),
             const SizedBox(height: 16),
             const Text(
               "Welcome Back, Driver",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             const Text(
               "Sign in to start your trip and broadcast real-time GPS telemetry.",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
             TextField(
               controller: _usernameController,
               decoration: InputDecoration(
                 labelText: "Username",
-                prefixIcon: const Icon(Icons.person),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.person_rounded, color: AppTheme.primaryEmerald),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppTheme.primaryEmerald, width: 2),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             TextField(
               controller: _passwordController,
               obscureText: true,
               decoration: InputDecoration(
                 labelText: "Password",
-                prefixIcon: const Icon(Icons.lock),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.lock_rounded, color: AppTheme.primaryEmerald),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppTheme.primaryEmerald, width: 2),
+                ),
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
+            
+            // Remember Me Option
+            Row(
+              children: [
+                Checkbox(
+                  value: _rememberMe,
+                  activeColor: AppTheme.primaryEmerald,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  onChanged: (val) {
+                    setState(() => _rememberMe = val ?? true);
+                  },
+                ),
+                const Text(
+                  "Remember me for direct login next time",
+                  style: TextStyle(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
             SizedBox(
               height: 52,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: AppTheme.primaryEmerald,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
                 onPressed: _isLoading ? null : _handleLogin,

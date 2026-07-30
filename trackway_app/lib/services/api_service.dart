@@ -36,9 +36,17 @@ class ApiService {
     return RouteDetails.fromJson(response.data);
   }
 
-  Future<GpsLocation> getLatestGps(int busId) async {
-    final response = await _dio.get("/api/gps/latest/$busId/");
-    return GpsLocation.fromJson(response.data);
+  Future<GpsLocation?> getLatestGps(int busId) async {
+    try {
+      final response = await _dio.get("/api/gps/latest/$busId/");
+      if (response.data != null) {
+        return GpsLocation.fromJson(response.data);
+      }
+      return null;
+    } catch (e) {
+      debugPrint("Get Latest GPS Error: $e");
+      return null;
+    }
   }
 
   Future<Map<String, dynamic>?> fetchBusEta(int busId) async {
@@ -146,6 +154,9 @@ class ApiService {
 
       await prefs.setString("token", data["token"] ?? "");
       await prefs.setString("username", data["username"] ?? "");
+      if (data["bus_name"] != null) {
+        await prefs.setString("bus_name", data["bus_name"]);
+      }
       if (data["bus_number"] != null) {
         await prefs.setString("bus_number", data["bus_number"]);
       }

@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/app_theme.dart';
-import '../../services/api_service.dart';
+import '../../services/gps_broadcast_service.dart';
 import '../home/home_screen.dart';
 import '../login/login_screen.dart';
 
@@ -16,88 +14,46 @@ class DriverDashboard extends StatefulWidget {
 }
 
 class _DriverDashboardState extends State<DriverDashboard> {
-  bool tripStarted = false;
-  int? activeJourneyId;
-  String username = "Driver";
-  String busNumber = "KL59J1234";
-
-  final ApiService apiService = ApiService();
-  Timer? timer;
-  Position? currentPosition;
+  String username = "driver1";
+  String busName = "Nayana";
+  String busNumber = "KL 59 N 4005";
 
   @override
   void initState() {
     super.initState();
+    GpsBroadcastService.instance.addListener(_onServiceUpdate);
     _loadDriverInfo();
-  }
-
-  Future<void> _loadDriverInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      username = prefs.getString("username") ?? "Driver";
-      busNumber = prefs.getString("bus_number") ?? "KL59J1234";
-    });
-  }
-
-  Future<void> sendGps() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Location services are disabled on device")),
-        );
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Location permissions are denied")),
-          );
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Location permissions permanently denied")),
-        );
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition();
-
-      if (!mounted) return;
-      setState(() {
-        currentPosition = position;
-      });
-
-      // Convert speed from m/s to km/h (multiply by 3.6)
-      final speedKmh = position.speed * 3.6;
-
-      await apiService.uploadGps(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        speed: double.parse(speedKmh.toStringAsFixed(1)),
-      );
-    } catch (e) {
-      debugPrint("sendGps Error: $e");
-    }
   }
 
   @override
   void dispose() {
-    timer?.cancel();
+    GpsBroadcastService.instance.removeListener(_onServiceUpdate);
     super.dispose();
+  }
+
+  void _onServiceUpdate() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _loadDriverInfo() async {
+    await GpsBroadcastService.instance.init();
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      username = prefs.getString("username") ?? "driver1";
+      busName = prefs.getString("bus_name") ?? "Nayana";
+      busNumber = prefs.getString("bus_number") ?? "KL 59 N 4005";
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final broadcastService = GpsBroadcastService.instance;
+    final tripStarted = broadcastService.isBroadcasting;
+    final currentPosition = broadcastService.currentPosition;
+
     return Scaffold(
       backgroundColor: AppTheme.bgMint,
       appBar: AppBar(
@@ -118,7 +74,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
             icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
             tooltip: "Log Out",
             onPressed: () async {
-              timer?.cancel();
+              await GpsBroadcastService.instance.stopBroadcast();
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
               if (!context.mounted) return;
@@ -183,9 +139,13 @@ class _DriverDashboardState extends State<DriverDashboard> {
                             children: [
                               const Icon(Icons.directions_bus_rounded, color: Color(0xFFD1FAE5), size: 16),
                               const SizedBox(width: 6),
-                              Text(
-                                "Assigned: $busNumber",
-                                style: const TextStyle(color: Color(0xFFD1FAE5), fontSize: 13),
+                              Expanded(
+                                child: Text(
+                                  busName.isNotEmpty ? "Assigned: $busName ($busNumber)" : "Assigned: $busNumber",
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Color(0xFFD1FAE5), fontSize: 13, fontWeight: FontWeight.w600),
+                                ),
                               ),
                             ],
                           ),
@@ -232,7 +192,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   if (!tripStarted) {
-                    final result = await apiService.startJourney();
+                    final result = await broadcastService.startBroadcast();
 
                     if (result["success"] != true) {
                       if (!mounted) return;
@@ -243,16 +203,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       );
                       return;
                     }
-
-                    activeJourneyId = result["id"] as int?;
-                    await sendGps();
-
-                    timer = Timer.periodic(
-                      const Duration(seconds: 4),
-                      (_) => sendGps(),
-                    );
                   } else {
-                    final stopped = await apiService.stopJourney();
+                    final stopped = await broadcastService.stopBroadcast();
                     if (!stopped) {
                       if (!mounted) return;
                       messenger.showSnackBar(
@@ -260,16 +212,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       );
                       return;
                     }
-
-                    timer?.cancel();
-                    timer = null;
-                    activeJourneyId = null;
                   }
-
-                  if (!mounted) return;
-                  setState(() {
-                    tripStarted = !tripStarted;
-                  });
                 },
               ),
             ),
@@ -302,7 +245,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     title: "Vehicle Speed",
                     value: currentPosition == null
                         ? "0.0 km/h"
-                        : "${(currentPosition!.speed * 3.6).toStringAsFixed(1)} km/h",
+                        : "${(currentPosition.speed * 3.6).toStringAsFixed(1)} km/h",
                     subtitle: "Satellite GPS",
                     valueColor: AppTheme.primaryEmerald,
                   ),
@@ -349,7 +292,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         Text(
                           currentPosition == null
                               ? "Acquiring satellite signal..."
-                              : "${currentPosition!.latitude.toStringAsFixed(5)}, ${currentPosition!.longitude.toStringAsFixed(5)}",
+                              : "${currentPosition.latitude.toStringAsFixed(5)}, ${currentPosition.longitude.toStringAsFixed(5)}",
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,

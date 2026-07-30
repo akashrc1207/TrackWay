@@ -1,0 +1,41 @@
+{
+  "feature_cols": [
+    "direction_flag",
+    "curr_lat",
+    "curr_lon",
+    "curr_speed_kmh",
+    "bearing",
+    "elevation",
+    "closest_stop_id",
+    "target_stop_id",
+    "stops_remaining",
+    "dist_to_target_km",
+    "route_progress",
+    "time_of_day_min"
+  ],
+  "num_samples": 92646,
+  "num_bus_stops": 38,
+  "num_trips": 6,
+  "routes": [
+    "Thaliparamba -> Cherupuzha",
+    "Cherupuzha -> Thaliparamba"
+  ],
+  "baseline_mae_minutes": 16.46,
+  "model_results": {
+    "RandomForest": {
+      "mae": 3.1155,
+      "rmse": 4.1669,
+      "r2": 0.9691
+    },
+    "ExtraTrees": {
+      "mae": 2.5959,
+      "rmse": 3.4228,
+      "r2": 0.979
+    },
+    "HistGradientBoosting": {
+      "mae": 2.8263,
+      "rmse": 3.701,
+      "r2": 0.9763
+    }
+  }
+}

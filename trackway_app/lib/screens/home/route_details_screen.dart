@@ -7,6 +7,7 @@ import '../tracking/tracking_screen.dart';
 
 class RouteDetailsScreen extends StatefulWidget {
   final int busId;
+  final String busName;
   final String busNumber;
   final int routeId;
   final String status;
@@ -15,6 +16,7 @@ class RouteDetailsScreen extends StatefulWidget {
   const RouteDetailsScreen({
     super.key,
     required this.busId,
+    this.busName = "",
     required this.busNumber,
     required this.routeId,
     required this.status,
@@ -103,7 +105,7 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.busNumber,
+                              widget.busName.isNotEmpty ? "${widget.busName} (${widget.busNumber})" : widget.busNumber,
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,

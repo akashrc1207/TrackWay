@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'config/app_theme.dart';
 import 'screens/login/login_screen.dart';
 
-void main() {
+import 'services/gps_broadcast_service.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await GpsBroadcastService.instance.init();
   runApp(const TrackWayApp());
 }
 

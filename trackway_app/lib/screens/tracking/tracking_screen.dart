@@ -16,9 +16,14 @@ class TrackingScreen extends StatefulWidget {
   State<TrackingScreen> createState() => _TrackingScreenState();
 }
 
-class _TrackingScreenState extends State<TrackingScreen> {
+class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   final MapController _mapController = MapController();
+
+  late AnimationController _animController;
+  final ValueNotifier<LatLng?> _animatedPosNotifier = ValueNotifier<LatLng?>(null);
+  LatLng? _oldBusPos;
+  LatLng? _targetBusPos;
 
   GpsLocation? _gpsLocation;
   Map<String, dynamic>? _etaData;
@@ -29,8 +34,24 @@ class _TrackingScreenState extends State<TrackingScreen> {
   @override
   void initState() {
     super.initState();
+
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..addListener(() {
+        if (_oldBusPos != null && _targetBusPos != null) {
+          final lat = _oldBusPos!.latitude + (_targetBusPos!.latitude - _oldBusPos!.latitude) * _animController.value;
+          final lng = _oldBusPos!.longitude + (_targetBusPos!.longitude - _oldBusPos!.longitude) * _animController.value;
+          final currentAnimatedPos = LatLng(lat, lng);
+          _animatedPosNotifier.value = currentAnimatedPos;
+          try {
+            _mapController.move(currentAnimatedPos, _mapController.camera.zoom);
+          } catch (_) {}
+        }
+      });
+
     _loadData();
-    _timer = Timer.periodic(const Duration(seconds: 4), (_) => _loadData());
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _loadData());
   }
 
   Future<void> _loadData() async {
@@ -40,6 +61,18 @@ class _TrackingScreenState extends State<TrackingScreen> {
 
       if (!mounted) return;
 
+      if (gps == null) {
+        setState(() {
+          _isLoading = false;
+          if (_gpsLocation == null) {
+            _errorMessage = "Waiting for live GPS location signal from Bus #${widget.busId}";
+          }
+        });
+        return;
+      }
+
+      final newPos = LatLng(gps.latitude, gps.longitude);
+
       setState(() {
         _gpsLocation = gps;
         _etaData = eta;
@@ -47,7 +80,22 @@ class _TrackingScreenState extends State<TrackingScreen> {
         _errorMessage = null;
       });
 
-      _mapController.move(LatLng(gps.latitude, gps.longitude), 14.5);
+      if (_targetBusPos == null) {
+        _oldBusPos = newPos;
+        _targetBusPos = newPos;
+        _animatedPosNotifier.value = newPos;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            try {
+              _mapController.move(newPos, 14.5);
+            } catch (_) {}
+          }
+        });
+      } else if (_targetBusPos != newPos) {
+        _oldBusPos = _animatedPosNotifier.value ?? _targetBusPos;
+        _targetBusPos = newPos;
+        _animController.forward(from: 0.0);
+      }
     } catch (e) {
       debugPrint("Tracking Load Error: $e");
       if (!mounted) return;
@@ -63,6 +111,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _animController.dispose();
+    _animatedPosNotifier.dispose();
     super.dispose();
   }
 
@@ -122,55 +172,46 @@ class _TrackingScreenState extends State<TrackingScreen> {
       );
     }
 
-    final busPos = LatLng(_gpsLocation!.latitude, _gpsLocation!.longitude);
     final stops = (_etaData?["stops_eta"] as List?) ?? [];
 
-    List<Marker> mapMarkers = [
-      Marker(
-        point: busPos,
-        width: 58,
-        height: 58,
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppTheme.primaryEmerald,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryEmerald.withValues(alpha: 0.4),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.directions_bus_rounded, color: Colors.white, size: 28),
-        ),
-      ),
-    ];
+    // Find immediate next stop index
+    int nextStopIndex = -1;
+    for (int i = 0; i < stops.length; i++) {
+      if (stops[i]["eta_text"] != "Passed") {
+        nextStopIndex = i;
+        break;
+      }
+    }
 
-    for (var stop in stops) {
+    List<Marker> stopMarkers = [];
+    for (int i = 0; i < stops.length; i++) {
+      final stop = stops[i];
       final stopLat = stop["latitude"] as double?;
       final stopLng = stop["longitude"] as double?;
       final stopName = stop["stop_name"] as String? ?? "Stop";
       final etaText = stop["eta_text"] as String? ?? "";
+      final isPassed = etaText == "Passed";
+      final isNext = i == nextStopIndex;
 
       if (stopLat != null && stopLng != null) {
-        mapMarkers.add(
+        stopMarkers.add(
           Marker(
             point: LatLng(stopLat, stopLng),
-            width: 100,
+            width: 105,
             height: 65,
             child: Column(
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryEmerald,
+                    color: isPassed
+                        ? Colors.grey.shade600
+                        : (isNext ? Colors.amber.shade800 : AppTheme.primaryEmerald),
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
                   ),
                   child: Text(
-                    "ETA $etaText",
+                    isPassed ? "Passed" : (isNext ? "NEXT: $etaText" : "ETA $etaText"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -178,12 +219,22 @@ class _TrackingScreenState extends State<TrackingScreen> {
                     ),
                   ),
                 ),
-                const Icon(Icons.location_on, color: AppTheme.primaryEmerald, size: 26),
+                Icon(
+                  isPassed ? Icons.check_circle_rounded : Icons.location_on,
+                  color: isPassed
+                      ? Colors.grey.shade500
+                      : (isNext ? Colors.amber.shade800 : AppTheme.primaryEmerald),
+                  size: isNext ? 28 : 22,
+                ),
                 Text(
                   stopName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isNext ? FontWeight.w900 : FontWeight.bold,
+                    color: isPassed ? Colors.grey.shade600 : AppTheme.textPrimary,
+                  ),
                 ),
               ],
             ),
@@ -197,7 +248,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.bgMint,
         title: Text(
-          "Live Bus #${widget.busId}",
+          _etaData?["bus_name"] != null ? "${_etaData!['bus_name']} (${_etaData!['bus_number']})" : "Live Bus #${widget.busId}",
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
@@ -212,7 +263,7 @@ class _TrackingScreenState extends State<TrackingScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: busPos,
+              initialCenter: _animatedPosNotifier.value ?? LatLng(_gpsLocation!.latitude, _gpsLocation!.longitude),
               initialZoom: 14.5,
             ),
             children: [
@@ -220,11 +271,41 @@ class _TrackingScreenState extends State<TrackingScreen> {
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 userAgentPackageName: "com.trackway.app",
               ),
-              MarkerLayer(markers: mapMarkers),
+              ValueListenableBuilder<LatLng?>(
+                valueListenable: _animatedPosNotifier,
+                builder: (context, pos, _) {
+                  final busPos = pos ?? LatLng(_gpsLocation!.latitude, _gpsLocation!.longitude);
+                  return MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: busPos,
+                        width: 62,
+                        height: 62,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryEmerald,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryEmerald.withValues(alpha: 0.45),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.directions_bus_rounded, color: Colors.white, size: 30),
+                        ),
+                      ),
+                      ...stopMarkers,
+                    ],
+                  );
+                },
+              ),
             ],
           ),
 
-          // Bottom Sheet Card Overlay - Concept 1 Mint & Emerald
+          // "Where Is My Train" Style Live Timeline Bottom Overlay
           Positioned(
             left: 16,
             right: 16,
@@ -265,12 +346,12 @@ class _TrackingScreenState extends State<TrackingScreen> {
                               "${_gpsLocation!.speed} km/h",
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
-                                fontSize: 19,
+                                fontSize: 20,
                                 color: AppTheme.textPrimary,
                               ),
                             ),
                             Text(
-                              _etaData?['route_name'] ?? 'Active Journey',
+                              _etaData?['route_name'] ?? 'Thaliparamba - Cherupuzha',
                               style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                             ),
                           ],
@@ -283,13 +364,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.3)),
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               CircleAvatar(radius: 3.5, backgroundColor: AppTheme.successGreen),
                               SizedBox(width: 6),
                               Text(
-                                "LIVE GPS",
+                                "SMOOTH LIVE",
                                 style: TextStyle(
                                   color: AppTheme.successGreen,
                                   fontWeight: FontWeight.w800,
@@ -307,41 +388,86 @@ class _TrackingScreenState extends State<TrackingScreen> {
                         padding: EdgeInsets.symmetric(vertical: 12.0),
                         child: Divider(height: 1, color: Color(0xFFE6F4ED)),
                       ),
+
+                      // "Where is my Train" Style Station Timeline
                       SizedBox(
-                        height: 68,
+                        height: 72,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: stops.length,
                           itemBuilder: (context, index) {
                             final s = stops[index];
+                            final etaText = s["eta_text"] ?? "";
+                            final isPassed = etaText == "Passed";
+                            final isNext = index == nextStopIndex;
+
                             return Container(
                               margin: const EdgeInsets.only(right: 10),
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               decoration: BoxDecoration(
-                                color: AppTheme.bgMint,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFFE6F4ED)),
+                                color: isNext
+                                    ? AppTheme.mintContainer
+                                    : (isPassed ? Colors.grey.shade100 : Colors.white),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isNext ? AppTheme.primaryEmerald : const Color(0xFFE6F4ED),
+                                  width: isNext ? 1.5 : 1.0,
+                                ),
                               ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Row(
                                 children: [
-                                  Text(
-                                    s["stop_name"] ?? "",
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: AppTheme.textPrimary,
-                                    ),
+                                  Icon(
+                                    isPassed
+                                        ? Icons.check_circle_rounded
+                                        : (isNext ? Icons.directions_bus_rounded : Icons.radio_button_checked_rounded),
+                                    color: isPassed
+                                        ? Colors.grey.shade400
+                                        : (isNext ? AppTheme.primaryEmerald : AppTheme.primaryEmeraldDark),
+                                    size: 20,
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    "ETA: ${s['eta_text']} • ${s['distance_km']} km",
-                                    style: const TextStyle(
-                                      color: AppTheme.primaryEmerald,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            s["stop_name"] ?? "",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                              color: isPassed ? Colors.grey.shade600 : AppTheme.textPrimary,
+                                            ),
+                                          ),
+                                          if (isNext) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.primaryEmerald,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: const Text(
+                                                "NEXT STOP",
+                                                style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        isPassed
+                                            ? "Departed"
+                                            : "ETA: ${s['eta_text']} (${s['distance_km']} km)",
+                                        style: TextStyle(
+                                          color: isPassed ? Colors.grey.shade500 : AppTheme.primaryEmeraldDark,
+                                          fontSize: 11,
+                                          fontWeight: isNext ? FontWeight.bold : FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),

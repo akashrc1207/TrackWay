@@ -1,0 +1,230 @@
+[
+  {
+    "order": 1,
+    "name": "Thaliparamba",
+    "road_cum_km": 0.0,
+    "best_idx": 0
+  },
+  {
+    "order": 2,
+    "name": "Pushpagiri",
+    "road_cum_km": 4.501,
+    "best_idx": 134
+  },
+  {
+    "order": 3,
+    "name": "Andikalam",
+    "road_cum_km": 5.447,
+    "best_idx": 157
+  },
+  {
+    "order": 4,
+    "name": "Chenayannur",
+    "road_cum_km": 6.251,
+    "best_idx": 230
+  },
+  {
+    "order": 5,
+    "name": "Kanhirangad",
+    "road_cum_km": 6.768,
+    "best_idx": 238
+  },
+  {
+    "order": 6,
+    "name": "Poovam",
+    "road_cum_km": 8.878,
+    "best_idx": 279
+  },
+  {
+    "order": 7,
+    "name": "Elemberam Para",
+    "road_cum_km": 10.648,
+    "best_idx": 503
+  },
+  {
+    "order": 8,
+    "name": "Naadukani",
+    "road_cum_km": 12.187,
+    "best_idx": 536
+  },
+  {
+    "order": 9,
+    "name": "Thettunna Road",
+    "road_cum_km": 12.923,
+    "best_idx": 547
+  },
+  {
+    "order": 10,
+    "name": "Madakkaad",
+    "road_cum_km": 14.468,
+    "best_idx": 699
+  },
+  {
+    "order": 11,
+    "name": "Ammankulam",
+    "road_cum_km": 15.77,
+    "best_idx": 864
+  },
+  {
+    "order": 12,
+    "name": "Oduvallythattu Bus Stand",
+    "road_cum_km": 17.063,
+    "best_idx": 1067
+  },
+  {
+    "order": 13,
+    "name": "Chanokund",
+    "road_cum_km": 19.364,
+    "best_idx": 1322
+  },
+  {
+    "order": 14,
+    "name": "Vayattparamb Kavala",
+    "road_cum_km": 20.115,
+    "best_idx": 1431
+  },
+  {
+    "order": 15,
+    "name": "Balapuram",
+    "road_cum_km": 20.728,
+    "best_idx": 1443
+  },
+  {
+    "order": 16,
+    "name": "Meenpatty",
+    "road_cum_km": 21.491,
+    "best_idx": 1544
+  },
+  {
+    "order": 17,
+    "name": "Karuvanchal",
+    "road_cum_km": 22.951,
+    "best_idx": 1576
+  },
+  {
+    "order": 18,
+    "name": "Kallody",
+    "road_cum_km": 23.649,
+    "best_idx": 1598
+  },
+  {
+    "order": 19,
+    "name": "Kottayad Kavala",
+    "road_cum_km": 24.687,
+    "best_idx": 1760
+  },
+  {
+    "order": 20,
+    "name": "Alakode New Bazar",
+    "road_cum_km": 25.782,
+    "best_idx": 1784
+  },
+  {
+    "order": 21,
+    "name": "Alakode",
+    "road_cum_km": 26.52,
+    "best_idx": 1822
+  },
+  {
+    "order": 22,
+    "name": "Arangam",
+    "road_cum_km": 27.446,
+    "best_idx": 1983
+  },
+  {
+    "order": 23,
+    "name": "Alakkode Panchayath Office",
+    "road_cum_km": 27.951,
+    "best_idx": 1996
+  },
+  {
+    "order": 24,
+    "name": "Nellipara",
+    "road_cum_km": 29.189,
+    "best_idx": 2180
+  },
+  {
+    "order": 25,
+    "name": "Rayarome",
+    "road_cum_km": 31.194,
+    "best_idx": 2216
+  },
+  {
+    "order": 26,
+    "name": "Pallipadi",
+    "road_cum_km": 31.944,
+    "best_idx": 2232
+  },
+  {
+    "order": 27,
+    "name": "Poyil",
+    "road_cum_km": 33.44,
+    "best_idx": 2255
+  },
+  {
+    "order": 28,
+    "name": "Therthalli",
+    "road_cum_km": 34.527,
+    "best_idx": 2275
+  },
+  {
+    "order": 29,
+    "name": "Panamkutty",
+    "road_cum_km": 36.086,
+    "best_idx": 2315
+  },
+  {
+    "order": 30,
+    "name": "Kodoppally",
+    "road_cum_km": 37.243,
+    "best_idx": 2339
+  },
+  {
+    "order": 31,
+    "name": "Kakkode",
+    "road_cum_km": 39.184,
+    "best_idx": 2377
+  },
+  {
+    "order": 32,
+    "name": "Peringala",
+    "road_cum_km": 39.535,
+    "best_idx": 2385
+  },
+  {
+    "order": 33,
+    "name": "Kallamkode",
+    "road_cum_km": 40.812,
+    "best_idx": 2402
+  },
+  {
+    "order": 34,
+    "name": "Manjakaad",
+    "road_cum_km": 42.115,
+    "best_idx": 2419
+  },
+  {
+    "order": 35,
+    "name": "Paakanjikaad",
+    "road_cum_km": 43.073,
+    "best_idx": 2432
+  },
+  {
+    "order": 36,
+    "name": "Vaniyamkunnu",
+    "road_cum_km": 43.607,
+    "best_idx": 2439
+  },
+  {
+    "order": 37,
+    "name": "Cherupuzha Central Bazar",
+    "road_cum_km": 44.772,
+    "best_idx": 2458
+  },
+  {
+    "order": 38,
+    "name": "Cherupuzha Bus Stand",
+    "road_cum_km": 45.111,
+    "best_idx": 2469
+  }
+]

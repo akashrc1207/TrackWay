@@ -13,10 +13,10 @@ class RouteStop {
 
   factory RouteStop.fromJson(Map<String, dynamic> json) {
     return RouteStop(
-      id: json["id"],
-      stopName: json["stop_name"],
-      latitude: json["latitude"].toDouble(),
-      longitude: json["longitude"].toDouble(),
+      id: (json["id"] as int?) ?? 0,
+      stopName: (json["stop_name"] as String?) ?? "",
+      latitude: (json["latitude"] as num? ?? 0).toDouble(),
+      longitude: (json["longitude"] as num? ?? 0).toDouble(),
     );
   }
 }

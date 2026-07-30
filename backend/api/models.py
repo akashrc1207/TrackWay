@@ -13,13 +13,14 @@ class Route(models.Model):
 
 
 class Bus(models.Model):
+    bus_name = models.CharField(max_length=100, default="")
     bus_number = models.CharField(max_length=20, unique=True)
-    capacity = models.PositiveIntegerField()
+    capacity = models.PositiveIntegerField(default=50)
     route = models.ForeignKey(Route, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, default="Active")
 
     def __str__(self):
-        return self.bus_number
+        return f"{self.bus_name} ({self.bus_number})" if self.bus_name else self.bus_number
 
 
 class BusStop(models.Model):
