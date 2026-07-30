@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api', '0002_journey_gpslog_journey'),
+        ("api", "0002_journey_gpslog_journey"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='busstop',
-            options={'ordering': ['stop_order']},
+            name="busstop",
+            options={"ordering": ["stop_order"]},
         ),
         migrations.AddField(
-            model_name='busstop',
-            name='stop_order',
+            model_name="busstop",
+            name="stop_order",
             field=models.PositiveIntegerField(default=1),
         ),
     ]

@@ -23,7 +23,11 @@ class LoginScreen extends StatelessWidget {
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppTheme.primaryEmerald, Color(0xFF047857), Color(0xFF064E3B)],
+                    colors: [
+                      AppTheme.primaryEmerald,
+                      Color(0xFF047857),
+                      Color(0xFF064E3B),
+                    ],
                   ),
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
@@ -62,7 +66,10 @@ class LoginScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
@@ -86,7 +93,10 @@ class LoginScreen extends StatelessWidget {
             Expanded(
               flex: 4,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 16.0,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -118,7 +128,9 @@ class LoginScreen extends StatelessWidget {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         elevation: 3,
-                        shadowColor: AppTheme.primaryEmerald.withValues(alpha: 0.35),
+                        shadowColor: AppTheme.primaryEmerald.withValues(
+                          alpha: 0.35,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -126,7 +138,10 @@ class LoginScreen extends StatelessWidget {
                       icon: const Icon(Icons.directions_bus_filled_rounded),
                       label: const Text(
                         "Passenger",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       onPressed: () {
                         Navigator.of(context).push(
@@ -141,12 +156,18 @@ class LoginScreen extends StatelessWidget {
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: const BorderSide(color: AppTheme.primaryEmerald, width: 2),
+                        side: const BorderSide(
+                          color: AppTheme.primaryEmerald,
+                          width: 2,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      icon: const Icon(Icons.badge_rounded, color: AppTheme.primaryEmerald),
+                      icon: const Icon(
+                        Icons.badge_rounded,
+                        color: AppTheme.primaryEmerald,
+                      ),
                       label: const Text(
                         "Driver Login Portal",
                         style: TextStyle(
@@ -157,7 +178,9 @@ class LoginScreen extends StatelessWidget {
                       ),
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const DriverLogin()),
+                          MaterialPageRoute(
+                            builder: (_) => const DriverLogin(),
+                          ),
                         );
                       },
                     ),

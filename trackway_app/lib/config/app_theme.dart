@@ -8,14 +8,14 @@ class AppTheme {
   static const Color bgMint = Color(0xFFF4FBF7); // Soft Mint Light Canvas
   static const Color cardBg = Colors.white;
   static const Color mintContainer = Color(0xFFD1FAE5);
-  
+
   // Status Colors
   static const Color successGreen = Color(0xFF059669);
   static const Color successBg = Color(0xFFD1FAE5);
-  
+
   static const Color warningAmber = Color(0xFFD97706);
   static const Color warningBg = Color(0xFFFEF3C7);
-  
+
   static const Color infoBlue = Color(0xFF0284C7);
   static const Color infoBg = Color(0xFFE0F2FE);
 
@@ -65,16 +65,16 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-          ),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 15,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Color(0xFFD1E7DD)),

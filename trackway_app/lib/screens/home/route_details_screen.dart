@@ -54,7 +54,9 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
       return Scaffold(
         backgroundColor: AppTheme.bgMint,
         appBar: AppBar(title: const Text("Route Details")),
-        body: const Center(child: CircularProgressIndicator(color: AppTheme.primaryEmerald)),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppTheme.primaryEmerald),
+        ),
       );
     }
 
@@ -97,7 +99,11 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                           color: AppTheme.mintContainer,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.directions_bus_rounded, color: AppTheme.primaryEmerald, size: 28),
+                        child: const Icon(
+                          Icons.directions_bus_rounded,
+                          color: AppTheme.primaryEmerald,
+                          size: 28,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -105,7 +111,9 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.busName.isNotEmpty ? "${widget.busName} (${widget.busNumber})" : widget.busNumber,
+                              widget.busName.isNotEmpty
+                                  ? "${widget.busName} (${widget.busNumber})"
+                                  : widget.busNumber,
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
@@ -114,13 +122,19 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                             ),
                             Text(
                               "Route ID #${widget.routeId} • Cap ${widget.capacity}",
-                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                              style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 13,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.successBg,
                           borderRadius: BorderRadius.circular(20),
@@ -144,17 +158,29 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
 
                   Row(
                     children: [
-                      const Icon(Icons.alt_route_rounded, color: AppTheme.primaryEmerald, size: 20),
+                      const Icon(
+                        Icons.alt_route_rounded,
+                        color: AppTheme.primaryEmerald,
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           "${routeDetails!.startLocation}  →  ${routeDetails!.endLocation}",
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppTheme.textPrimary,
+                          ),
                         ),
                       ),
                       Text(
                         "${routeDetails!.totalDistance} km",
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryEmerald, fontSize: 14),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryEmerald,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -166,40 +192,61 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
 
             const Text(
               "Route Station Sequence",
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
             ),
 
             const SizedBox(height: 12),
 
-            ...routeDetails!.stops.map(
-              (stop) => Container(
+            ...routeDetails!.stops.map((stop) {
+              return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: const Color(0xFFE6F4ED)),
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.mintContainer,
-                      shape: BoxShape.circle,
+                child: Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
                     ),
-                    child: const Icon(Icons.location_on_rounded, color: AppTheme.primaryEmerald, size: 18),
-                  ),
-                  title: Text(
-                    stop.stopName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
-                  ),
-                  subtitle: Text(
-                    "Coordinates: ${stop.latitude.toStringAsFixed(4)}, ${stop.longitude.toStringAsFixed(4)}",
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.mintContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.location_on_rounded,
+                        color: AppTheme.primaryEmerald,
+                        size: 18,
+                      ),
+                    ),
+                    title: Text(
+                      stop.stopName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      "Coordinates: ${stop.latitude.toStringAsFixed(4)}, ${stop.longitude.toStringAsFixed(4)}",
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            }).toList(),
 
             const SizedBox(height: 28),
 
@@ -211,10 +258,15 @@ class _RouteDetailsScreenState extends State<RouteDetailsScreen> {
                   backgroundColor: AppTheme.primaryEmerald,
                   foregroundColor: Colors.white,
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
                 icon: const Icon(Icons.my_location_rounded),
-                label: const Text("TRACK LIVE BUS POSITION", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                label: const Text(
+                  "TRACK LIVE BUS POSITION",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
                 onPressed: () {
                   Navigator.push(
                     context,

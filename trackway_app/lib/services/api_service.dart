@@ -83,7 +83,9 @@ class ApiService {
 
       debugPrint("GPS Upload Success: ${response.statusCode}");
     } on DioException catch (e) {
-      debugPrint("GPS Upload Error: ${e.response?.statusCode} - ${e.response?.data}");
+      debugPrint(
+        "GPS Upload Error: ${e.response?.statusCode} - ${e.response?.data}",
+      );
     }
   }
 
@@ -98,7 +100,10 @@ class ApiService {
     }
 
     if (token == null || token.isEmpty) {
-      return {"success": false, "error": "Authentication required. Please log in."};
+      return {
+        "success": false,
+        "error": "Authentication required. Please log in.",
+      };
     }
 
     try {
@@ -113,7 +118,10 @@ class ApiService {
         "data": response.data,
       };
     } on DioException catch (e) {
-      final errorMsg = e.response?.data?["error"] ?? e.response?.data?["detail"] ?? "Server error (${e.response?.statusCode})";
+      final errorMsg =
+          e.response?.data?["error"] ??
+          e.response?.data?["detail"] ??
+          "Server error (${e.response?.statusCode})";
       debugPrint("Start Journey Error: $errorMsg");
       return {"success": false, "error": errorMsg};
     } catch (e) {

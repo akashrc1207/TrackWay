@@ -29,7 +29,9 @@ class GpsBroadcastService extends ChangeNotifier {
       _activeJourneyId = prefs.getInt("active_journey_id");
 
       if (_isBroadcasting && _timer == null) {
-        debugPrint("Restoring active GPS broadcast session (Journey #$_activeJourneyId)...");
+        debugPrint(
+          "Restoring active GPS broadcast session (Journey #$_activeJourneyId)...",
+        );
         _startTimer();
         sendGps();
       }

@@ -24,7 +24,7 @@ class ETAServiceTest(TestCase):
             target_lat=12.2746351,
             target_lng=75.3637389,
             target_stop_order=38,
-            direction_flag=0
+            direction_flag=0,
         )
         self.assertIsNotNone(pred_eta_fwd)
         self.assertGreater(pred_eta_fwd, 30.0)
@@ -38,7 +38,7 @@ class ETAServiceTest(TestCase):
             target_lat=12.0369964,
             target_lng=75.3600476,
             target_stop_order=1,
-            direction_flag=1
+            direction_flag=1,
         )
         self.assertIsNotNone(pred_eta_ret)
         self.assertGreater(pred_eta_ret, 30.0)
@@ -49,8 +49,8 @@ class ETAServiceTest(TestCase):
             current_lng=75.3600476,
             current_speed_kmh=30.0,
             target_lat=12.1680284,
-            target_lng=75.4628332, # Karuvanchal (midpoint stop)
-            target_stop_order=17
+            target_lng=75.4628332,  # Karuvanchal (midpoint stop)
+            target_stop_order=17,
         )
         self.assertIn("eta_minutes", res)
         self.assertTrue(res["is_ml"])
@@ -66,33 +66,27 @@ class BusETAApiTest(TestCase):
             route_name="Thaliparamba - Cherupuzha",
             start_location="Thaliparamba",
             end_location="Cherupuzha",
-            total_distance=45.0
+            total_distance=45.0,
         )
         self.bus = Bus.objects.create(
-            bus_number="KL-59-A-1234",
-            capacity=50,
-            route=self.route,
-            status="Active"
+            bus_number="KL-59-A-1234", capacity=50, route=self.route, status="Active"
         )
         self.stop1 = BusStop.objects.create(
             stop_name="Thaliparamba",
             latitude=12.0369964,
             longitude=75.3600476,
             route=self.route,
-            stop_order=1
+            stop_order=1,
         )
         self.stop2 = BusStop.objects.create(
             stop_name="Karuvanchal",
             latitude=12.1680284,
             longitude=75.4628332,
             route=self.route,
-            stop_order=17
+            stop_order=17,
         )
         self.gps = GPSLog.objects.create(
-            bus=self.bus,
-            latitude=12.037135,
-            longitude=75.360110,
-            speed=25.5
+            bus=self.bus, latitude=12.037135, longitude=75.360110, speed=25.5
         )
 
     def test_get_bus_eta_endpoint(self):

@@ -42,7 +42,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              child: const Icon(Icons.directions_bus_rounded, color: Colors.white, size: 22),
+              child: const Icon(
+                Icons.directions_bus_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 10),
             const Text(
@@ -64,7 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
               border: Border.all(color: const Color(0xFFE6F4ED)),
             ),
             child: IconButton(
-              icon: const Icon(Icons.notifications_outlined, color: AppTheme.textPrimary, size: 22),
+              icon: const Icon(
+                Icons.notifications_outlined,
+                color: AppTheme.textPrimary,
+                size: 22,
+              ),
               onPressed: () {},
             ),
           ),
@@ -81,7 +89,11 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [AppTheme.primaryEmerald, Color(0xFF047857), Color(0xFF064E3B)],
+                  colors: [
+                    AppTheme.primaryEmerald,
+                    Color(0xFF047857),
+                    Color(0xFF064E3B),
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -109,7 +121,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
@@ -118,7 +133,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircleAvatar(radius: 4, backgroundColor: Color(0xFF6EE7B7)),
+                            CircleAvatar(
+                              radius: 4,
+                              backgroundColor: Color(0xFF6EE7B7),
+                            ),
                             SizedBox(width: 6),
                             Text(
                               "LIVE MAP",
@@ -156,8 +174,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: TextField(
                       decoration: InputDecoration(
                         hintText: "Search Bus Number, Stop or Route...",
-                        hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 14),
-                        prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.primaryEmerald),
+                        hintStyle: const TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 14,
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: AppTheme.primaryEmerald,
+                        ),
                         suffixIcon: isLoadingSearch
                             ? const Padding(
                                 padding: EdgeInsets.all(12.0),
@@ -193,7 +217,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -222,91 +249,117 @@ class _HomeScreenState extends State<HomeScreen> {
                             border: Border.all(color: const Color(0xFFE6F4ED)),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryEmerald.withValues(alpha: 0.06),
+                                color: AppTheme.primaryEmerald.withValues(
+                                  alpha: 0.06,
+                                ),
                                 blurRadius: 10,
                                 offset: const Offset(0, 3),
                               ),
                             ],
                           ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            leading: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: AppTheme.mintContainer,
-                                borderRadius: BorderRadius.circular(14),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
                               ),
-                              child: const Icon(Icons.directions_bus_rounded, color: AppTheme.primaryEmerald),
-                            ),
-                            title: Text(
-                              bus.displayName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: AppTheme.textPrimary,
-                              ),
-                            ),
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.successBg,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      bus.status.isNotEmpty ? bus.status : "Active",
-                                      style: const TextStyle(
-                                        color: AppTheme.successGreen,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    "Cap: ${bus.capacity}",
-                                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            trailing: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryEmerald,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                              leading: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.mintContainer,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(
+                                  Icons.directions_bus_rounded,
+                                  color: AppTheme.primaryEmerald,
                                 ),
                               ),
-                              onPressed: () {
+                              title: Text(
+                                bus.displayName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.successBg,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        bus.status.isNotEmpty
+                                            ? bus.status
+                                            : "Active",
+                                        style: const TextStyle(
+                                          color: AppTheme.successGreen,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Cap: ${bus.capacity}",
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              trailing: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryEmerald,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          TrackingScreen(busId: bus.id),
+                                    ),
+                                  );
+                                },
+                                child: const Text(
+                                  "Track",
+                                  style: TextStyle(fontSize: 13),
+                                ),
+                              ),
+                              onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => TrackingScreen(busId: bus.id),
+                                    builder: (_) => RouteDetailsScreen(
+                                      busId: bus.id,
+                                      busName: bus.busName,
+                                      busNumber: bus.busNumber,
+                                      routeId: bus.route,
+                                      status: bus.status,
+                                      capacity: bus.capacity,
+                                    ),
                                   ),
                                 );
                               },
-                              child: const Text("Track", style: TextStyle(fontSize: 13)),
                             ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => RouteDetailsScreen(
-                                    busId: bus.id,
-                                    busName: bus.busName,
-                                    busNumber: bus.busNumber,
-                                    routeId: bus.route,
-                                    status: bus.status,
-                                    capacity: bus.capacity,
-                                  ),
-                                ),
-                              );
-                            },
                           ),
                         );
                       },
@@ -337,7 +390,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const NearbyStopsScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const NearbyStopsScreen(),
+                              ),
                             );
                           },
                         ),
@@ -353,7 +408,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const SearchScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const SearchScreen(),
+                              ),
                             );
                           },
                         ),
@@ -371,7 +428,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const SavedRoutesScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const SavedRoutesScreen(),
+                              ),
                             );
                           },
                         ),
@@ -385,7 +444,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const SearchScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const SearchScreen(),
+                              ),
                             );
                           },
                         ),
@@ -455,9 +516,14 @@ class QuickCommuteCard extends StatelessWidget {
                 ),
                 if (badgeText != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color: (badgeColor ?? AppTheme.primaryEmerald).withValues(alpha: 0.12),
+                      color: (badgeColor ?? AppTheme.primaryEmerald).withValues(
+                        alpha: 0.12,
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -518,45 +584,63 @@ class CommuterStationTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE6F4ED)),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppTheme.mintContainer,
-            shape: BoxShape.circle,
+      child: Material(
+        color: Colors.transparent,
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
           ),
-          child: const Icon(Icons.location_on_rounded, color: AppTheme.primaryEmerald, size: 20),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppTheme.mintContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                distance,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryEmeraldDark),
-              ),
+          leading: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.mintContainer,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 4),
-            Text(
-              availableRoutes,
-              style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
+            child: const Icon(
+              Icons.location_on_rounded,
+              color: AppTheme.primaryEmerald,
+              size: 20,
             ),
-          ],
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          subtitle: Text(
+            subtitle,
+            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+          trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppTheme.mintContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  distance,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryEmeraldDark,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                availableRoutes,
+                style: const TextStyle(fontSize: 10, color: AppTheme.textMuted),
+              ),
+            ],
+          ),
         ),
       ),
     );

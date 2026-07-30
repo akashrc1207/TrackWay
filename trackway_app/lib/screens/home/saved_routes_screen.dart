@@ -33,7 +33,10 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
   void initState() {
     super.initState();
     loadRouteMapData();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 4), (_) => loadRouteMapData());
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 4),
+      (_) => loadRouteMapData(),
+    );
   }
 
   @override
@@ -54,7 +57,8 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
       }
     }
 
-    int activeBusId = selectedBusId ?? (busesData.isNotEmpty ? busesData.first.id : 7);
+    int activeBusId =
+        selectedBusId ?? (busesData.isNotEmpty ? busesData.first.id : 7);
     final busEtaData = await apiService.fetchBusEta(activeBusId);
 
     if (busEtaData != null && busEtaData["stops_eta"] != null) {
@@ -138,12 +142,20 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
               children: [
                 // Stop Name Label
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: isTerminal ? AppTheme.primaryEmerald : Colors.white,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.primaryEmerald, width: 1.5),
-                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                    border: Border.all(
+                      color: AppTheme.primaryEmerald,
+                      width: 1.5,
+                    ),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 4),
+                    ],
                   ),
                   child: Text(
                     "#$stopOrder ${stop.stopName}",
@@ -152,7 +164,9 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: isTerminal ? Colors.white : AppTheme.primaryEmeraldDark,
+                      color: isTerminal
+                          ? Colors.white
+                          : AppTheme.primaryEmeraldDark,
                     ),
                   ),
                 ),
@@ -161,10 +175,14 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                 Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: isTerminal ? AppTheme.primaryEmerald : AppTheme.mintContainer,
+                    color: isTerminal
+                        ? AppTheme.primaryEmerald
+                        : AppTheme.mintContainer,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 1.5),
-                    boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 4),
+                    ],
                   ),
                   child: Icon(
                     Icons.hail_rounded, // Bus stop sign icon
@@ -200,15 +218,26 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
-                    color: isSelected ? Colors.amber.shade800 : AppTheme.primaryEmerald,
+                    color: isSelected
+                        ? Colors.amber.shade800
+                        : AppTheme.primaryEmerald,
                     borderRadius: BorderRadius.circular(10),
-                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 6),
+                    ],
                   ),
                   child: Text(
                     bus.displayName,
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 Container(
@@ -216,9 +245,16 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                   decoration: BoxDecoration(
                     color: isSelected ? Colors.amber : Colors.white,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.primaryEmerald, width: 2),
+                    border: Border.all(
+                      color: AppTheme.primaryEmerald,
+                      width: 2,
+                    ),
                   ),
-                  child: const Icon(Icons.directions_bus_rounded, color: AppTheme.primaryEmerald, size: 20),
+                  child: const Icon(
+                    Icons.directions_bus_rounded,
+                    color: AppTheme.primaryEmerald,
+                    size: 20,
+                  ),
                 ),
               ],
             ),
@@ -237,17 +273,27 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
           children: [
             Text(
               routeDetails!.routeName,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: AppTheme.textPrimary,
+              ),
             ),
             Text(
               "${routeDetails!.stops.length} Bus Stops • ${activeBuses.length} Active Buses",
-              style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.center_focus_strong_rounded, color: AppTheme.primaryEmerald),
+            icon: const Icon(
+              Icons.center_focus_strong_rounded,
+              color: AppTheme.primaryEmerald,
+            ),
             onPressed: _recenterRoute,
           ),
         ],
@@ -257,10 +303,7 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
           // Interactive Full Map View
           FlutterMap(
             mapController: _mapController,
-            options: MapOptions(
-              initialCenter: mapCenter,
-              initialZoom: 11.2,
-            ),
+            options: MapOptions(initialCenter: mapCenter, initialZoom: 11.2),
             children: [
               TileLayer(
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -327,7 +370,9 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
               return Container(
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.96),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.12),
@@ -370,23 +415,36 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                               ),
                               Text(
                                 "Route Distance: ${routeDetails!.totalDistance} km | 38 Bus Stops",
-                                style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.successBg,
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: const Row(
                               children: [
-                                CircleAvatar(radius: 3.5, backgroundColor: AppTheme.successGreen),
+                                CircleAvatar(
+                                  radius: 3.5,
+                                  backgroundColor: AppTheme.successGreen,
+                                ),
                                 SizedBox(width: 5),
                                 Text(
                                   "LIVE MAP",
-                                  style: TextStyle(color: AppTheme.successGreen, fontSize: 10, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                    color: AppTheme.successGreen,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ],
                             ),
@@ -399,7 +457,11 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                       // Active Buses Selector
                       const Text(
                         "Active Route Buses on Map",
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 10),
                       Row(
@@ -410,19 +472,32 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                               padding: const EdgeInsets.only(right: 8.0),
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: isSelected ? AppTheme.primaryEmerald : Colors.white,
-                                  foregroundColor: isSelected ? Colors.white : AppTheme.textPrimary,
+                                  backgroundColor: isSelected
+                                      ? AppTheme.primaryEmerald
+                                      : Colors.white,
+                                  foregroundColor: isSelected
+                                      ? Colors.white
+                                      : AppTheme.textPrimary,
                                   elevation: 0,
                                   side: BorderSide(
-                                    color: isSelected ? AppTheme.primaryEmerald : const Color(0xFFE6F4ED),
+                                    color: isSelected
+                                        ? AppTheme.primaryEmerald
+                                        : const Color(0xFFE6F4ED),
                                   ),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
                                 ),
                                 onPressed: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (_) => TrackingScreen(busId: b.id)),
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          TrackingScreen(busId: b.id),
+                                    ),
                                   );
                                 },
                                 child: Column(
@@ -432,14 +507,18 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12,
-                                        color: isSelected ? Colors.white : AppTheme.primaryEmerald,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : AppTheme.primaryEmerald,
                                       ),
                                     ),
                                     Text(
                                       b.busNumber,
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: isSelected ? Colors.white70 : AppTheme.textSecondary,
+                                        color: isSelected
+                                            ? Colors.white70
+                                            : AppTheme.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -455,7 +534,11 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                       // 38 Complete Bus Stops List
                       Text(
                         "Route Station Sequence (${routeDetails!.stops.length} Stops)",
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 12),
 
@@ -471,51 +554,79 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
-                            color: isPassed ? Colors.grey.shade50 : Colors.white,
+                            color: isPassed
+                                ? Colors.grey.shade50
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: isPassed ? Colors.grey.shade200 : const Color(0xFFE6F4ED)),
+                            border: Border.all(
+                              color: isPassed
+                                  ? Colors.grey.shade200
+                                  : const Color(0xFFE6F4ED),
+                            ),
                           ),
-                          child: ListTile(
-                            dense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                            leading: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: isPassed ? Colors.grey.shade200 : AppTheme.mintContainer,
-                                shape: BoxShape.circle,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: ListTile(
+                              dense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 2,
                               ),
-                              child: Icon(
-                                isPassed ? Icons.check_circle_rounded : Icons.hail_rounded,
-                                color: isPassed ? Colors.grey.shade400 : AppTheme.primaryEmerald,
-                                size: 14,
+                              leading: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: isPassed
+                                      ? Colors.grey.shade200
+                                      : AppTheme.mintContainer,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  isPassed
+                                      ? Icons.check_circle_rounded
+                                      : Icons.hail_rounded,
+                                  color: isPassed
+                                      ? Colors.grey.shade400
+                                      : AppTheme.primaryEmerald,
+                                  size: 14,
+                                ),
                               ),
-                            ),
-                            title: Text(
-                              "#$stopOrder ${stop.stopName}",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: isPassed ? Colors.grey.shade600 : AppTheme.textPrimary,
+                              title: Text(
+                                "#${stopOrder} ${stop.stopName}",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: isPassed
+                                      ? Colors.grey.shade600
+                                      : AppTheme.textPrimary,
+                                ),
                               ),
-                            ),
-                            subtitle: Text(
-                              "Lat: ${stop.latitude.toStringAsFixed(4)}, Lon: ${stop.longitude.toStringAsFixed(4)}",
-                              style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
-                            ),
-                            trailing: Text(
-                              isPassed ? "Departed" : (etaText ?? "AI ETA"),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isPassed ? Colors.grey.shade500 : AppTheme.primaryEmerald,
+                              subtitle: Text(
+                                "Lat: ${stop.latitude.toStringAsFixed(4)}, Lon: ${stop.longitude.toStringAsFixed(4)}",
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: AppTheme.textSecondary,
+                                ),
                               ),
+                              trailing: Text(
+                                isPassed ? "Departed" : (etaText ?? "AI ETA"),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: isPassed
+                                      ? Colors.grey.shade500
+                                      : AppTheme.primaryEmerald,
+                                ),
+                              ),
+                              onTap: () {
+                                _mapController.move(
+                                  LatLng(stop.latitude, stop.longitude),
+                                  15.0,
+                                );
+                              },
                             ),
-                            onTap: () {
-                              _mapController.move(LatLng(stop.latitude, stop.longitude), 15.0);
-                            },
                           ),
                         );
-                      }),
+                      }).toList(),
                     ],
                   ),
                 ),

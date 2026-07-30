@@ -63,7 +63,9 @@ class _DriverLoginState extends State<DriverLogin> {
 
     if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter both username and password")),
+        const SnackBar(
+          content: Text("Please enter both username and password"),
+        ),
       );
       return;
     }
@@ -116,7 +118,13 @@ class _DriverLoginState extends State<DriverLogin> {
       appBar: AppBar(
         backgroundColor: AppTheme.bgMint,
         elevation: 0,
-        title: const Text("Driver Portal Login", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+        title: const Text(
+          "Driver Portal Login",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
@@ -130,13 +138,21 @@ class _DriverLoginState extends State<DriverLogin> {
                 color: AppTheme.mintContainer,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.directions_bus_rounded, size: 64, color: AppTheme.primaryEmerald),
+              child: const Icon(
+                Icons.directions_bus_rounded,
+                size: 64,
+                color: AppTheme.primaryEmerald,
+              ),
             ),
             const SizedBox(height: 16),
             const Text(
               "Welcome Back, Driver",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -149,11 +165,19 @@ class _DriverLoginState extends State<DriverLogin> {
               controller: _usernameController,
               decoration: InputDecoration(
                 labelText: "Username",
-                prefixIcon: const Icon(Icons.person_rounded, color: AppTheme.primaryEmerald),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                prefixIcon: const Icon(
+                  Icons.person_rounded,
+                  color: AppTheme.primaryEmerald,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.primaryEmerald, width: 2),
+                  borderSide: const BorderSide(
+                    color: AppTheme.primaryEmerald,
+                    width: 2,
+                  ),
                 ),
               ),
             ),
@@ -163,30 +187,44 @@ class _DriverLoginState extends State<DriverLogin> {
               obscureText: true,
               decoration: InputDecoration(
                 labelText: "Password",
-                prefixIcon: const Icon(Icons.lock_rounded, color: AppTheme.primaryEmerald),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                prefixIcon: const Icon(
+                  Icons.lock_rounded,
+                  color: AppTheme.primaryEmerald,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.primaryEmerald, width: 2),
+                  borderSide: const BorderSide(
+                    color: AppTheme.primaryEmerald,
+                    width: 2,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            
+
             // Remember Me Option
             Row(
               children: [
                 Checkbox(
                   value: _rememberMe,
                   activeColor: AppTheme.primaryEmerald,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                   onChanged: (val) {
                     setState(() => _rememberMe = val ?? true);
                   },
                 ),
                 const Text(
                   "Remember me for direct login next time",
-                  style: TextStyle(fontSize: 13, color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -207,11 +245,17 @@ class _DriverLoginState extends State<DriverLogin> {
                     ? const SizedBox(
                         height: 24,
                         width: 24,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
                       )
                     : const Text(
                         "Sign In as Driver",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
               ),
             ),

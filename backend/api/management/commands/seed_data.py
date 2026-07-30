@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from api.models import Route, Bus, BusStop, Driver, GPSLog, Journey
 
+
 class Command(BaseCommand):
     help = "Seed database with realistic routes, bus stops, buses, drivers, and initial GPS logs for TrackWay"
 
@@ -24,14 +25,29 @@ class Command(BaseCommand):
                 "start_location": "Thaliparamba",
                 "end_location": "Cherupuzha",
                 "total_distance": 42.0,
-            }
+            },
         )
 
         # 3. Get or Create Real Bus Stops
         stops_data = [
-            {"stop_name": "Oduvallithattu Bus Stop", "latitude": 12.1150, "longitude": 75.4500, "stop_order": 1},
-            {"stop_name": "Karuvanchal Bus Stop", "latitude": 12.1800, "longitude": 75.4800, "stop_order": 2},
-            {"stop_name": "Alakode Bus Stop", "latitude": 12.2300, "longitude": 75.5200, "stop_order": 3},
+            {
+                "stop_name": "Oduvallithattu Bus Stop",
+                "latitude": 12.1150,
+                "longitude": 75.4500,
+                "stop_order": 1,
+            },
+            {
+                "stop_name": "Karuvanchal Bus Stop",
+                "latitude": 12.1800,
+                "longitude": 75.4800,
+                "stop_order": 2,
+            },
+            {
+                "stop_name": "Alakode Bus Stop",
+                "latitude": 12.2300,
+                "longitude": 75.5200,
+                "stop_order": 3,
+            },
         ]
 
         for s in stops_data:
@@ -42,7 +58,7 @@ class Command(BaseCommand):
                     "latitude": s["latitude"],
                     "longitude": s["longitude"],
                     "stop_order": s["stop_order"],
-                }
+                },
             )
 
         # 4. Get or Create Real Bus
@@ -52,7 +68,7 @@ class Command(BaseCommand):
                 "capacity": 50,
                 "route": route1,
                 "status": "Active",
-            }
+            },
         )
 
         # 5. Create/Assign Driver Profile
@@ -61,7 +77,7 @@ class Command(BaseCommand):
             defaults={
                 "phone": "+919876543210",
                 "assigned_bus": bus1,
-            }
+            },
         )
         if driver.assigned_bus != bus1:
             driver.assigned_bus = bus1
@@ -75,4 +91,6 @@ class Command(BaseCommand):
             speed=30.0,
         )
 
-        self.stdout.write(self.style.SUCCESS("Successfully updated TrackWay seed data!"))
+        self.stdout.write(
+            self.style.SUCCESS("Successfully updated TrackWay seed data!")
+        )

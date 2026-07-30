@@ -26,5 +26,6 @@ class Bus {
     );
   }
 
-  String get displayName => busName.isNotEmpty ? "$busName ($busNumber)" : busNumber;
+  String get displayName =>
+      busName.isNotEmpty ? "$busName ($busNumber)" : busNumber;
 }

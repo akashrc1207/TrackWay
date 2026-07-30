@@ -20,7 +20,9 @@ class Bus(models.Model):
     status = models.CharField(max_length=20, default="Active")
 
     def __str__(self):
-        return f"{self.bus_name} ({self.bus_number})" if self.bus_name else self.bus_number
+        return (
+            f"{self.bus_name} ({self.bus_number})" if self.bus_name else self.bus_number
+        )
 
 
 class BusStop(models.Model):
@@ -31,7 +33,7 @@ class BusStop(models.Model):
     stop_order = models.PositiveIntegerField(default=1)
 
     class Meta:
-        ordering = ['stop_order']
+        ordering = ["stop_order"]
 
     def __str__(self):
         return f"{self.stop_order}. {self.stop_name}"
@@ -41,14 +43,12 @@ class Driver(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15, unique=True)
     assigned_bus = models.OneToOneField(
-        Bus,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
+        Bus, on_delete=models.SET_NULL, null=True, blank=True
     )
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
+
 
 class Journey(models.Model):
     bus = models.ForeignKey(Bus, on_delete=models.CASCADE)
@@ -62,14 +62,12 @@ class Journey(models.Model):
     def __str__(self):
         return f"{self.bus.bus_number} - {self.start_time}"
 
+
 class GPSLog(models.Model):
     bus = models.ForeignKey(Bus, on_delete=models.CASCADE)
     journey = models.ForeignKey(
-    Journey,
-    on_delete=models.CASCADE,
-    null=True,
-    blank=True
-)
+        Journey, on_delete=models.CASCADE, null=True, blank=True
+    )
     latitude = models.FloatField()
     longitude = models.FloatField()
     speed = models.FloatField()

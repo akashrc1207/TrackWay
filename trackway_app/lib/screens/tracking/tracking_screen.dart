@@ -16,12 +16,15 @@ class TrackingScreen extends StatefulWidget {
   State<TrackingScreen> createState() => _TrackingScreenState();
 }
 
-class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProviderStateMixin {
+class _TrackingScreenState extends State<TrackingScreen>
+    with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
   final MapController _mapController = MapController();
 
   late AnimationController _animController;
-  final ValueNotifier<LatLng?> _animatedPosNotifier = ValueNotifier<LatLng?>(null);
+  final ValueNotifier<LatLng?> _animatedPosNotifier = ValueNotifier<LatLng?>(
+    null,
+  );
   LatLng? _oldBusPos;
   LatLng? _targetBusPos;
 
@@ -35,20 +38,30 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
   void initState() {
     super.initState();
 
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..addListener(() {
-        if (_oldBusPos != null && _targetBusPos != null) {
-          final lat = _oldBusPos!.latitude + (_targetBusPos!.latitude - _oldBusPos!.latitude) * _animController.value;
-          final lng = _oldBusPos!.longitude + (_targetBusPos!.longitude - _oldBusPos!.longitude) * _animController.value;
-          final currentAnimatedPos = LatLng(lat, lng);
-          _animatedPosNotifier.value = currentAnimatedPos;
-          try {
-            _mapController.move(currentAnimatedPos, _mapController.camera.zoom);
-          } catch (_) {}
-        }
-      });
+    _animController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 2000),
+        )..addListener(() {
+          if (_oldBusPos != null && _targetBusPos != null) {
+            final lat =
+                _oldBusPos!.latitude +
+                (_targetBusPos!.latitude - _oldBusPos!.latitude) *
+                    _animController.value;
+            final lng =
+                _oldBusPos!.longitude +
+                (_targetBusPos!.longitude - _oldBusPos!.longitude) *
+                    _animController.value;
+            final currentAnimatedPos = LatLng(lat, lng);
+            _animatedPosNotifier.value = currentAnimatedPos;
+            try {
+              _mapController.move(
+                currentAnimatedPos,
+                _mapController.camera.zoom,
+              );
+            } catch (_) {}
+          }
+        });
 
     _loadData();
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => _loadData());
@@ -65,7 +78,8 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
         setState(() {
           _isLoading = false;
           if (_gpsLocation == null) {
-            _errorMessage = "Waiting for live GPS location signal from Bus #${widget.busId}";
+            _errorMessage =
+                "Waiting for live GPS location signal from Bus #${widget.busId}";
           }
         });
         return;
@@ -102,7 +116,8 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
       setState(() {
         _isLoading = false;
         if (_gpsLocation == null) {
-          _errorMessage = "Waiting for live location signal from Bus ${widget.busId}";
+          _errorMessage =
+              "Waiting for live location signal from Bus ${widget.busId}";
         }
       });
     }
@@ -144,13 +159,21 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
                     color: AppTheme.warningBg,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.location_off_rounded, size: 54, color: AppTheme.warningAmber),
+                  child: const Icon(
+                    Icons.location_off_rounded,
+                    size: 54,
+                    color: AppTheme.warningAmber,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   _errorMessage ?? "No GPS location signal available yet.",
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 15, color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton.icon(
@@ -202,16 +225,25 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: isPassed
                         ? Colors.grey.shade600
-                        : (isNext ? Colors.amber.shade800 : AppTheme.primaryEmerald),
+                        : (isNext
+                              ? Colors.amber.shade800
+                              : AppTheme.primaryEmerald),
                     borderRadius: BorderRadius.circular(8),
-                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 4),
+                    ],
                   ),
                   child: Text(
-                    isPassed ? "Passed" : (isNext ? "NEXT: $etaText" : "ETA $etaText"),
+                    isPassed
+                        ? "Passed"
+                        : (isNext ? "NEXT: $etaText" : "ETA $etaText"),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -223,7 +255,9 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
                   isPassed ? Icons.check_circle_rounded : Icons.location_on,
                   color: isPassed
                       ? Colors.grey.shade500
-                      : (isNext ? Colors.amber.shade800 : AppTheme.primaryEmerald),
+                      : (isNext
+                            ? Colors.amber.shade800
+                            : AppTheme.primaryEmerald),
                   size: isNext ? 28 : 22,
                 ),
                 Text(
@@ -233,7 +267,9 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: isNext ? FontWeight.w900 : FontWeight.bold,
-                    color: isPassed ? Colors.grey.shade600 : AppTheme.textPrimary,
+                    color: isPassed
+                        ? Colors.grey.shade600
+                        : AppTheme.textPrimary,
                   ),
                 ),
               ],
@@ -248,12 +284,17 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
       appBar: AppBar(
         backgroundColor: AppTheme.bgMint,
         title: Text(
-          _etaData?["bus_name"] != null ? "${_etaData!['bus_name']} (${_etaData!['bus_number']})" : "Live Bus #${widget.busId}",
+          _etaData?["bus_name"] != null
+              ? "${_etaData!['bus_name']} (${_etaData!['bus_number']})"
+              : "Live Bus #${widget.busId}",
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.primaryEmerald),
+            icon: const Icon(
+              Icons.refresh_rounded,
+              color: AppTheme.primaryEmerald,
+            ),
             onPressed: _loadData,
           ),
         ],
@@ -263,7 +304,9 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _animatedPosNotifier.value ?? LatLng(_gpsLocation!.latitude, _gpsLocation!.longitude),
+              initialCenter:
+                  _animatedPosNotifier.value ??
+                  LatLng(_gpsLocation!.latitude, _gpsLocation!.longitude),
               initialZoom: 14.5,
             ),
             children: [
@@ -274,7 +317,9 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
               ValueListenableBuilder<LatLng?>(
                 valueListenable: _animatedPosNotifier,
                 builder: (context, pos, _) {
-                  final busPos = pos ?? LatLng(_gpsLocation!.latitude, _gpsLocation!.longitude);
+                  final busPos =
+                      pos ??
+                      LatLng(_gpsLocation!.latitude, _gpsLocation!.longitude);
                   return MarkerLayer(
                     markers: [
                       Marker(
@@ -288,13 +333,19 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
                             border: Border.all(color: Colors.white, width: 3.5),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryEmerald.withValues(alpha: 0.45),
+                                color: AppTheme.primaryEmerald.withValues(
+                                  alpha: 0.45,
+                                ),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.directions_bus_rounded, color: Colors.white, size: 30),
+                          child: const Icon(
+                            Icons.directions_bus_rounded,
+                            color: Colors.white,
+                            size: 30,
+                          ),
                         ),
                       ),
                       ...stopMarkers,
@@ -336,7 +387,11 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
                             color: AppTheme.mintContainer,
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Icon(Icons.speed_rounded, color: AppTheme.primaryEmerald, size: 26),
+                          child: const Icon(
+                            Icons.speed_rounded,
+                            color: AppTheme.primaryEmerald,
+                            size: 26,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Column(
@@ -351,23 +406,37 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
                               ),
                             ),
                             Text(
-                              _etaData?['route_name'] ?? 'Thaliparamba - Cherupuzha',
-                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                              _etaData?['route_name'] ??
+                                  'Thaliparamba - Cherupuzha',
+                              style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                         ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.successBg,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: AppTheme.successGreen.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              CircleAvatar(radius: 3.5, backgroundColor: AppTheme.successGreen),
+                              CircleAvatar(
+                                radius: 3.5,
+                                backgroundColor: AppTheme.successGreen,
+                              ),
                               SizedBox(width: 6),
                               Text(
                                 "SMOOTH LIVE",
@@ -403,14 +472,21 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
 
                             return Container(
                               margin: const EdgeInsets.only(right: 10),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
                               decoration: BoxDecoration(
                                 color: isNext
                                     ? AppTheme.mintContainer
-                                    : (isPassed ? Colors.grey.shade100 : Colors.white),
+                                    : (isPassed
+                                          ? Colors.grey.shade100
+                                          : Colors.white),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: isNext ? AppTheme.primaryEmerald : const Color(0xFFE6F4ED),
+                                  color: isNext
+                                      ? AppTheme.primaryEmerald
+                                      : const Color(0xFFE6F4ED),
                                   width: isNext ? 1.5 : 1.0,
                                 ),
                               ),
@@ -419,16 +495,22 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
                                   Icon(
                                     isPassed
                                         ? Icons.check_circle_rounded
-                                        : (isNext ? Icons.directions_bus_rounded : Icons.radio_button_checked_rounded),
+                                        : (isNext
+                                              ? Icons.directions_bus_rounded
+                                              : Icons
+                                                    .radio_button_checked_rounded),
                                     color: isPassed
                                         ? Colors.grey.shade400
-                                        : (isNext ? AppTheme.primaryEmerald : AppTheme.primaryEmeraldDark),
+                                        : (isNext
+                                              ? AppTheme.primaryEmerald
+                                              : AppTheme.primaryEmeraldDark),
                                     size: 20,
                                   ),
                                   const SizedBox(width: 8),
                                   Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -437,20 +519,31 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 13,
-                                              color: isPassed ? Colors.grey.shade600 : AppTheme.textPrimary,
+                                              color: isPassed
+                                                  ? Colors.grey.shade600
+                                                  : AppTheme.textPrimary,
                                             ),
                                           ),
                                           if (isNext) ...[
                                             const SizedBox(width: 6),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
                                               decoration: BoxDecoration(
                                                 color: AppTheme.primaryEmerald,
-                                                borderRadius: BorderRadius.circular(6),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
                                               ),
                                               child: const Text(
                                                 "NEXT STOP",
-                                                style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 8,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                             ),
                                           ],
@@ -462,9 +555,13 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
                                             ? "Departed"
                                             : "ETA: ${s['eta_text']} (${s['distance_km']} km)",
                                         style: TextStyle(
-                                          color: isPassed ? Colors.grey.shade500 : AppTheme.primaryEmeraldDark,
+                                          color: isPassed
+                                              ? Colors.grey.shade500
+                                              : AppTheme.primaryEmeraldDark,
                                           fontSize: 11,
-                                          fontWeight: isNext ? FontWeight.bold : FontWeight.w600,
+                                          fontWeight: isNext
+                                              ? FontWeight.bold
+                                              : FontWeight.w600,
                                         ),
                                       ),
                                     ],
