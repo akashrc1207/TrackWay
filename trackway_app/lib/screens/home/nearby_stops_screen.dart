@@ -6,6 +6,7 @@ import '../../config/app_theme.dart';
 import '../../models/route_details.dart';
 import '../../models/route_stop.dart';
 import '../../services/api_service.dart';
+import '../../services/location_permission_service.dart';
 import '../tracking/tracking_screen.dart';
 
 class NearbyStopsScreen extends StatefulWidget {
@@ -39,10 +40,10 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
   List<NearbyStopsItem> nearbyStops = [];
   Map<int, Map<String, dynamic>> etaMap = {};
 
-  // User location or default central route coordinate (Oduvallythattu)
-  double userLat = 12.1353962;
-  double userLng = 75.4408002;
-  String locationStatus = "GPS Active";
+  // Default to Thaliparamba route origin coordinate
+  double userLat = 12.0369964;
+  double userLng = 75.3600476;
+  String locationStatus = "Route Origin";
 
   String activeFilter = "Nearest 5";
 
@@ -52,38 +53,65 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
     initLocationAndLoadStops();
   }
 
+  bool _isValidRegion(double lat, double lng) {
+    return lat >= 8.0 && lat <= 15.0 && lng >= 74.0 && lng <= 78.0;
+  }
+
   double _haversine(double lat1, double lon1, double lat2, double lon2) {
     const r = 6371.0;
     final dLat = (lat2 - lat1) * (pi / 180.0);
     final dLon = (lon2 - lon1) * (pi / 180.0);
-    final a =
-        sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * (pi / 180.0)) *
-            cos(lat2 * (pi / 180.0)) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * (pi / 180.0)) * cos(lat2 * (pi / 180.0)) * sin(dLon / 2) * sin(dLon / 2);
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return r * c;
   }
 
   Future<void> initLocationAndLoadStops() async {
     try {
-      Position? pos = await Geolocator.getLastKnownPosition().timeout(
-        const Duration(seconds: 2),
-      );
-      if (pos != null) {
-        userLat = pos.latitude;
-        userLng = pos.longitude;
-        locationStatus = "Live GPS";
+      final permissionResult = await ensureLocationPermission();
+      if (!permissionResult.granted) {
+        locationStatus = "Route Origin";
       } else {
-        locationStatus = "Route Center";
+        Position? pos;
+        try {
+          pos = await Geolocator.getLastKnownPosition().timeout(const Duration(seconds: 2));
+        } catch (_) {
+          pos = null;
+        }
+
+        if (pos == null) {
+          try {
+            pos = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.medium,
+                timeLimit: Duration(seconds: 4),
+              ),
+            );
+          } catch (_) {
+            pos = null;
+          }
+        }
+
+        if (pos != null && _isValidRegion(pos.latitude, pos.longitude)) {
+          userLat = pos.latitude;
+          userLng = pos.longitude;
+          locationStatus = "Live GPS";
+        } else {
+          locationStatus = "Route Origin";
+        }
       }
     } catch (_) {
-      locationStatus = "Route Center";
+      locationStatus = "Route Origin";
     }
 
     try {
       final data = await apiService.getRouteDetails(widget.routeId);
+      if (data == null) {
+        if (!mounted) return;
+        setState(() => isLoading = false);
+        return;
+      }
       final busesData = await apiService.searchBus("");
 
       int activeBusId = 7;
@@ -105,12 +133,7 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
       for (int i = 0; i < data.stops.length; i++) {
         final stop = data.stops[i];
         final stopOrder = i + 1;
-        final dist = _haversine(
-          userLat,
-          userLng,
-          stop.latitude,
-          stop.longitude,
-        );
+        final dist = _haversine(userLat, userLng, stop.latitude, stop.longitude);
 
         String? etaText;
         double? etaMinutes;
@@ -119,18 +142,16 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
           etaMinutes = (etaMap[stopOrder]!["eta_minutes"] as num?)?.toDouble();
         }
 
-        items.add(
-          NearbyStopsItem(
-            stop: stop,
-            stopOrder: stopOrder,
-            distanceKm: dist,
-            etaText: etaText,
-            etaMinutes: etaMinutes,
-          ),
-        );
+        items.add(NearbyStopsItem(
+          stop: stop,
+          stopOrder: stopOrder,
+          distanceKm: dist,
+          etaText: etaText,
+          etaMinutes: etaMinutes,
+        ));
       }
 
-      // Sort by proximity to user
+      // Sort strictly by proximity to user / passenger position
       items.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
 
       if (!mounted) return;
@@ -170,20 +191,13 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
           children: [
             const Text(
               "Nearby Route Stops",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: AppTheme.textPrimary,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.textPrimary),
             ),
             Text(
               routeDetails != null
                   ? "${routeDetails!.routeName} (${routeDetails!.stops.length} Stops)"
                   : "Thaliparamba ➔ Cherupuzha",
-              style: const TextStyle(
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
+              style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
             ),
           ],
         ),
@@ -194,26 +208,16 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
             decoration: BoxDecoration(
               color: AppTheme.successBg,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppTheme.successGreen.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.3)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.gps_fixed_rounded,
-                  color: AppTheme.successGreen,
-                  size: 14,
-                ),
+                const Icon(Icons.gps_fixed_rounded, color: AppTheme.successGreen, size: 14),
                 const SizedBox(width: 4),
                 Text(
                   locationStatus,
-                  style: const TextStyle(
-                    color: AppTheme.successGreen,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(color: AppTheme.successGreen, fontSize: 11, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -221,21 +225,14 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
         ],
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primaryEmerald),
-            )
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryEmerald))
           : Column(
               children: [
                 // Filter Chips
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
-                    children: ["Nearest 5", "Nearest 10", "All Stops"].map((
-                      filter,
-                    ) {
+                    children: ["Nearest 5", "Nearest 10", "All Stops"].map((filter) {
                       final isSelected = activeFilter == filter;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8.0),
@@ -245,22 +242,17 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
                           selectedColor: AppTheme.primaryEmerald,
                           backgroundColor: Colors.white,
                           labelStyle: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : AppTheme.textPrimary,
+                            color: isSelected ? Colors.white : AppTheme.textPrimary,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                             side: BorderSide(
-                              color: isSelected
-                                  ? AppTheme.primaryEmerald
-                                  : const Color(0xFFE6F4ED),
+                              color: isSelected ? AppTheme.primaryEmerald : const Color(0xFFE6F4ED),
                             ),
                           ),
-                          onSelected: (_) =>
-                              setState(() => activeFilter = filter),
+                          onSelected: (_) => setState(() => activeFilter = filter),
                         ),
                       );
                     }).toList(),
@@ -284,16 +276,10 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: index == 0
-                                ? AppTheme.primaryEmerald
-                                : const Color(0xFFE6F4ED),
-                          ),
+                          border: Border.all(color: index == 0 ? AppTheme.primaryEmerald : const Color(0xFFE6F4ED)),
                           boxShadow: [
                             BoxShadow(
-                              color: AppTheme.primaryEmerald.withValues(
-                                alpha: index == 0 ? 0.08 : 0.03,
-                              ),
+                              color: AppTheme.primaryEmerald.withValues(alpha: index == 0 ? 0.08 : 0.03),
                               blurRadius: 10,
                               offset: const Offset(0, 3),
                             ),
@@ -306,55 +292,45 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: index == 0
-                                        ? AppTheme.primaryEmerald
-                                        : AppTheme.mintContainer,
+                                    color: index == 0 ? AppTheme.primaryEmerald : AppTheme.mintContainer,
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
                                     Icons.location_on_rounded,
-                                    color: index == 0
-                                        ? Colors.white
-                                        : AppTheme.primaryEmerald,
+                                    color: index == 0 ? Colors.white : AppTheme.primaryEmerald,
                                     size: 20,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
-                                          Text(
-                                            item.stop.stopName,
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.textPrimary,
+                                          Flexible(
+                                            child: Text(
+                                              item.stop.stopName,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppTheme.textPrimary,
+                                              ),
                                             ),
                                           ),
                                           if (index == 0) ...[
                                             const SizedBox(width: 6),
                                             Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                    vertical: 2,
-                                                  ),
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                               decoration: BoxDecoration(
                                                 color: AppTheme.primaryEmerald,
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
+                                                borderRadius: BorderRadius.circular(8),
                                               ),
                                               child: const Text(
                                                 "CLOSEST",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 9,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                                               ),
                                             ),
                                           ],
@@ -363,19 +339,14 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
                                       const SizedBox(height: 2),
                                       Text(
                                         "Stop #${item.stopOrder} on route",
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppTheme.textSecondary,
-                                        ),
+                                        style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                                       ),
                                     ],
                                   ),
                                 ),
+                                const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
                                     color: AppTheme.mintContainer,
                                     borderRadius: BorderRadius.circular(14),
@@ -385,7 +356,7 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
                                     style: const TextStyle(
                                       color: AppTheme.primaryEmerald,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 13,
+                                      fontSize: 12,
                                     ),
                                   ),
                                 ),
@@ -394,10 +365,7 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
 
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 12),
-                              child: Divider(
-                                height: 1,
-                                color: Color(0xFFE6F4ED),
-                              ),
+                              child: Divider(height: 1, color: Color(0xFFE6F4ED)),
                             ),
 
                             Row(
@@ -405,16 +373,10 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(
-                                      Icons.auto_awesome_rounded,
-                                      color: AppTheme.primaryEmerald,
-                                      size: 16,
-                                    ),
+                                    const Icon(Icons.auto_awesome_rounded, color: AppTheme.primaryEmerald, size: 16),
                                     const SizedBox(width: 6),
                                     Text(
-                                      item.etaText != null
-                                          ? "AI ETA: ${item.etaText}"
-                                          : "AI ETA: Calculating...",
+                                      item.etaText != null ? "AI ETA: ${item.etaText}" : "AI ETA: Calculating...",
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w700,
                                         fontSize: 13,
@@ -428,32 +390,15 @@ class _NearbyStopsScreenState extends State<NearbyStopsScreen> {
                                     backgroundColor: AppTheme.primaryEmerald,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 8,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   ),
-                                  icon: const Icon(
-                                    Icons.my_location_rounded,
-                                    size: 14,
-                                  ),
-                                  label: const Text(
-                                    "Track Bus",
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  icon: const Icon(Icons.my_location_rounded, size: 14),
+                                  label: const Text("Track Bus", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            const TrackingScreen(busId: 1),
-                                      ),
+                                      MaterialPageRoute(builder: (_) => const TrackingScreen(busId: 1)),
                                     );
                                   },
                                 ),

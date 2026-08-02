@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("api", "0003_alter_busstop_options_busstop_stop_order"),
+        ('api', '0003_alter_busstop_options_busstop_stop_order'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name="bus",
-            name="bus_name",
-            field=models.CharField(default="", max_length=100),
+            model_name='bus',
+            name='bus_name',
+            field=models.CharField(default='', max_length=100),
         ),
         migrations.AlterField(
-            model_name="bus",
-            name="capacity",
+            model_name='bus',
+            name='capacity',
             field=models.PositiveIntegerField(default=50),
         ),
     ]

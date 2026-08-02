@@ -1,10 +1,16 @@
+import csv
+import os
+
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from api.models import Route, Bus, BusStop, Driver, GPSLog, Journey
+from api.models import Route, Bus, BusStop, Driver, GPSLog
 
 
 class Command(BaseCommand):
-    help = "Seed database with realistic routes, bus stops, buses, drivers, and initial GPS logs for TrackWay"
+    help = (
+        "Seed the database with the real Thaliparamba-Cherupuzha route (38 stops), "
+        "a small bus fleet, and a driver login for TrackWay."
+    )
 
     def handle(self, *args, **options):
         self.stdout.write("Seeding TrackWay database...")
@@ -18,79 +24,100 @@ class Command(BaseCommand):
             driver_user.save()
             self.stdout.write("Created user: driver1 (password: driver123)")
 
-        # 2. Get or Create Real Route
+        # 2. Get or Create the Real Route
+        # 45.1 km matches the road-distance total baked into
+        # ml_models/stop_road_distances.json (used by the ETA engine).
         route1, _ = Route.objects.get_or_create(
             route_name="Thaliparamba-Cherupuzha",
             defaults={
                 "start_location": "Thaliparamba",
                 "end_location": "Cherupuzha",
-                "total_distance": 42.0,
-            },
+                "total_distance": 45.1,
+            }
         )
+        if route1.total_distance != 45.1:
+            route1.total_distance = 45.1
+            route1.save()
 
-        # 3. Get or Create Real Bus Stops
-        stops_data = [
-            {
-                "stop_name": "Oduvallithattu Bus Stop",
-                "latitude": 12.1150,
-                "longitude": 75.4500,
-                "stop_order": 1,
-            },
-            {
-                "stop_name": "Karuvanchal Bus Stop",
-                "latitude": 12.1800,
-                "longitude": 75.4800,
-                "stop_order": 2,
-            },
-            {
-                "stop_name": "Alakode Bus Stop",
-                "latitude": 12.2300,
-                "longitude": 75.5200,
-                "stop_order": 3,
-            },
+        # 3. Seed the real 38 bus stops from the same bus_stops.csv the LSTM
+        # model and ETA engine use, so the route shown in the app always
+        # matches what the ETA/direction logic is actually calculating
+        # against. (The old version of this command hardcoded 3 fake stops
+        # with different coordinates than the rest of the system.)
+        ml_models_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "ml_models",
+        )
+        stops_csv_path = os.path.join(ml_models_dir, "bus_stops.csv")
+
+        created_stops = 0
+        if os.path.exists(stops_csv_path):
+            with open(stops_csv_path, newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    _, was_created = BusStop.objects.get_or_create(
+                        route=route1,
+                        stop_order=int(row["stop_number"]),
+                        defaults={
+                            "stop_name": row["stop_name"],
+                            "latitude": float(row["latitude"]),
+                            "longitude": float(row["longitude"]),
+                        }
+                    )
+                    if was_created:
+                        created_stops += 1
+            total_stops = BusStop.objects.filter(route=route1).count()
+            self.stdout.write(f"Seeded {created_stops} new bus stops ({total_stops} total on route).")
+        else:
+            self.stdout.write(self.style.WARNING(
+                f"bus_stops.csv not found at {stops_csv_path}; no stops were seeded. "
+                "The route will have no BusStop rows until this is fixed."
+            ))
+
+        # 4. Create the fleet buses that run this route
+        buses_data = [
+            {"bus_name": "Nayana", "bus_number": "KL 59 N 4005", "capacity": 52},
+            {"bus_name": "Holy Angel", "bus_number": "KL 59 M 6555", "capacity": 48},
+            {"bus_name": "Big Show", "bus_number": "KL 59 Z 8499", "capacity": 55},
         ]
 
-        for s in stops_data:
-            BusStop.objects.get_or_create(
-                route=route1,
-                stop_name=s["stop_name"],
+        buses = []
+        for b in buses_data:
+            bus, _ = Bus.objects.get_or_create(
+                bus_number=b["bus_number"],
                 defaults={
-                    "latitude": s["latitude"],
-                    "longitude": s["longitude"],
-                    "stop_order": s["stop_order"],
-                },
+                    "bus_name": b["bus_name"],
+                    "capacity": b["capacity"],
+                    "route": route1,
+                    "status": "Active",
+                }
             )
+            buses.append(bus)
 
-        # 4. Get or Create Real Bus
-        bus1, _ = Bus.objects.get_or_create(
-            bus_number="KL59J1234",
-            defaults={
-                "capacity": 50,
-                "route": route1,
-                "status": "Active",
-            },
-        )
-
-        # 5. Create/Assign Driver Profile
+        # 5. Assign the driver to the first bus
         driver, _ = Driver.objects.get_or_create(
             user=driver_user,
             defaults={
                 "phone": "+919876543210",
-                "assigned_bus": bus1,
-            },
+                "assigned_bus": buses[0],
+            }
         )
-        if driver.assigned_bus != bus1:
-            driver.assigned_bus = bus1
+        if driver.assigned_bus != buses[0]:
+            driver.assigned_bus = buses[0]
             driver.save()
 
-        # 6. Create Initial GPS Log
-        GPSLog.objects.get_or_create(
-            bus=bus1,
-            latitude=12.1155,
-            longitude=75.4510,
-            speed=30.0,
-        )
+        # 6. Create an initial GPS log at the route's starting stop, so a
+        # freshly-seeded bus has *some* live position before a real driver
+        # session or the run_demo simulator starts broadcasting.
+        first_stop = BusStop.objects.filter(route=route1, stop_order=1).first()
+        if first_stop:
+            GPSLog.objects.get_or_create(
+                bus=buses[0],
+                latitude=first_stop.latitude,
+                longitude=first_stop.longitude,
+                speed=0.0,
+            )
 
-        self.stdout.write(
-            self.style.SUCCESS("Successfully updated TrackWay seed data!")
-        )
+        self.stdout.write(self.style.SUCCESS(
+            "Successfully seeded TrackWay database with the real 38-stop route!"
+        ))

@@ -1,5 +1,8 @@
 class ApiConstants {
-  static const String baseUrl = "http://10.0.2.2:8000";
+  static const String baseUrl = String.fromEnvironment(
+    'BACKEND_URL',
+    defaultValue: "http://10.0.2.2:8000",
+  );
 
   static const String routes = "$baseUrl/api/routes/";
   static const String buses = "$baseUrl/api/buses/";

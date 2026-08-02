@@ -10,10 +10,13 @@ class RouteSerializer(serializers.ModelSerializer):
 
 class BusSerializer(serializers.ModelSerializer):
     route_name = serializers.CharField(source="route.route_name", read_only=True)
-    start_location = serializers.CharField(
-        source="route.start_location", read_only=True
-    )
+    start_location = serializers.CharField(source="route.start_location", read_only=True)
     end_location = serializers.CharField(source="route.end_location", read_only=True)
+    status = serializers.SerializerMethodField()
+
+    def get_status(self, obj):
+        has_active_journey = Journey.objects.filter(bus=obj, is_active=True).exists()
+        return "Active" if has_active_journey else "Inactive"
 
     class Meta:
         model = Bus
@@ -37,12 +40,10 @@ class GPSLogSerializer(serializers.ModelSerializer):
         model = GPSLog
         fields = "__all__"
 
-
 class JourneySerializer(serializers.ModelSerializer):
     class Meta:
         model = Journey
         fields = "__all__"
-
 
 class RouteDetailSerializer(serializers.ModelSerializer):
     stops = BusStopSerializer(source="busstop_set", many=True)

@@ -41,7 +41,10 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Search Buses & Routes"), elevation: 0),
+      appBar: AppBar(
+        title: const Text("Search Buses & Routes"),
+        elevation: 0,
+      ),
       body: Column(
         children: [
           Padding(
@@ -73,83 +76,76 @@ class _SearchScreenState extends State<SearchScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _searchResults.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(
-                          Icons.directions_bus_outlined,
-                          size: 64,
-                          color: Colors.grey,
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(Icons.directions_bus_outlined, size: 64, color: Colors.grey),
+                            SizedBox(height: 12),
+                            Text(
+                              "No buses found matching your query",
+                              style: TextStyle(color: Colors.grey, fontSize: 16),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 12),
-                        Text(
-                          "No buses found matching your query",
-                          style: TextStyle(color: Colors.grey, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _searchResults.length,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemBuilder: (context, index) {
-                      final bus = _searchResults[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        elevation: 2,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(14),
-                          leading: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              shape: BoxShape.circle,
+                      )
+                    : ListView.builder(
+                        itemCount: _searchResults.length,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemBuilder: (context, index) {
+                          final bus = _searchResults[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            child: const Icon(
-                              Icons.directions_bus,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          title: Text(
-                            bus.displayName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Text(
-                              "Route #${bus.route} • Status: ${bus.status}",
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
-                          ),
-                          trailing: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                            elevation: 2,
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.all(14),
+                              leading: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.directions_bus, color: Colors.blue),
+                              ),
+                              title: Text(
+                                bus.displayName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  "Route #${bus.route} • Status: ${bus.status}",
+                                  style: TextStyle(color: Colors.grey.shade700),
+                                ),
+                              ),
+                              trailing: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.my_location, size: 18),
+                                label: const Text("Track"),
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => TrackingScreen(busId: bus.id),
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-                            icon: const Icon(Icons.my_location, size: 18),
-                            label: const Text("Track"),
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => TrackingScreen(busId: bus.id),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),

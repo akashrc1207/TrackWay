@@ -61,20 +61,51 @@ ROUTE_STOPS = [
     (38, "Cherupuzha Bus Stand", 12.2746351, 75.3637389),
 ]
 
-
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate the great circle distance in kilometers between two points."""
     R = 6371.0
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
 
-    a = math.sin(dlat / 2.0) ** 2 + math.cos(math.radians(lat1)) * math.cos(
-        math.radians(lat2)
-    ) * (math.sin(dlon / 2.0) ** 2)
-
+    a = (math.sin(dlat / 2.0) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) *
+         (math.sin(dlon / 2.0) ** 2))
+    
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+def closest_stop_id(lat: float, lng: float) -> tuple[int, float]:
+    """Find the stop_order of the ROUTE_STOPS entry nearest to (lat, lng)."""
+    stop_id = 1
+    min_dist = float('inf')
+    for seq, name, slat, slon in ROUTE_STOPS:
+        d = haversine_distance(lat, lng, slat, slon)
+        if d < min_dist:
+            min_dist = d
+            stop_id = seq
+    return stop_id, min_dist
+
+def infer_direction(gps_points: "list[tuple[float, float]]") -> int:
+    """
+    Infer the bus's current direction of travel from a short history of
+    (lat, lng) points ordered oldest -> newest.
+
+    Returns 0 for the "forward" leg (Thaliparamba -> Cherupuzha, increasing
+    stop order) and 1 for the "return" leg (Cherupuzha -> Thaliparamba, decreasing
+    stop order).
+    """
+    if not gps_points:
+        return 0
+
+    first_stop, _ = closest_stop_id(*gps_points[0])
+    last_stop, _ = closest_stop_id(*gps_points[-1])
+
+    if len(gps_points) >= 2 and last_stop != first_stop:
+        return 1 if last_stop < first_stop else 0
+
+    # Fallback when stationary or insufficient history:
+    # If nearest stop is in the upper half of the route (stop > 19), default to return leg.
+    return 1 if last_stop > 19 else 0
 
 def _load_stop_road_distances():
     global _STOP_ROAD_DISTS
@@ -85,16 +116,15 @@ def _load_stop_road_distances():
     dist_path = os.path.join(base_dir, "ml_models", "stop_road_distances.json")
     if os.path.exists(dist_path):
         try:
-            with open(dist_path, "r") as f:
+            with open(dist_path, 'r') as f:
                 data = json.load(f)
-                _STOP_ROAD_DISTS = {item["order"]: item["road_cum_km"] for item in data}
+                _STOP_ROAD_DISTS = {item['order']: item['road_cum_km'] for item in data}
         except Exception as e:
             logger.error(f"Error loading stop_road_distances.json: {e}")
             _STOP_ROAD_DISTS = {}
     else:
         _STOP_ROAD_DISTS = {}
     return _STOP_ROAD_DISTS
-
 
 def _load_model():
     """Load joblib ExtraTrees fallback model into memory."""
@@ -108,11 +138,10 @@ def _load_model():
 
     try:
         import joblib
-
         if os.path.exists(model_path):
             _MODEL = joblib.load(model_path)
             if os.path.exists(meta_path):
-                with open(meta_path, "r") as f:
+                with open(meta_path, 'r') as f:
                     _METADATA = json.load(f)
         else:
             _MODEL = None
@@ -123,16 +152,13 @@ def _load_model():
     _MODEL_LOADED = True
     return _MODEL, _METADATA
 
-
 def _load_v5_lstm_model():
     """Load Akash's V5 Keras LSTM Model & Scaler."""
     global _V5_MODEL, _V5_SCALER, _V5_STOPS, _V5_LOADED
     if _V5_LOADED:
         return _V5_MODEL, _V5_SCALER, _V5_STOPS
 
-    ml_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ml_models"
-    )
+    ml_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ml_models")
     v5_model_path = os.path.join(ml_dir, "eta_lstm_v5.keras")
     v5_scaler_path = os.path.join(ml_dir, "feature_scaler_v5.joblib")
     v5_stops_path = os.path.join(ml_dir, "bus_stops.csv")
@@ -157,27 +183,35 @@ def _load_v5_lstm_model():
     _V5_LOADED = True
     return _V5_MODEL, _V5_SCALER, _V5_STOPS
 
-
 def get_v5_predictor(bus_id: int = 1, direction: str = "forward"):
-    """Get or instantiate LiveETAPredictorV5 for a given bus."""
+    """
+    Get or instantiate LiveETAPredictorV5 for a given bus.
+
+    Predictors are cached per bus, but if the bus's direction has flipped
+    since the predictor was created (e.g. it reached the terminus and
+    started its return leg), the predictor is recreated with the new
+    direction rather than silently keeping the old one forever.
+    """
     global _V5_PREDICTORS
     model, scaler, stops = _load_v5_lstm_model()
     if model is None or scaler is None or stops is None:
         return None
 
-    if bus_id not in _V5_PREDICTORS:
+    cached = _V5_PREDICTORS.get(bus_id)
+
+    if cached is None or cached.direction != direction:
         try:
             import sys
-
-            ml_dir = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ml_models"
-            )
+            ml_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ml_models")
             if ml_dir not in sys.path:
                 sys.path.append(ml_dir)
             from live_eta_predictor_v5 import LiveETAPredictorV5
 
             _V5_PREDICTORS[bus_id] = LiveETAPredictorV5(
-                model=model, scaler=scaler, stops=stops, direction=direction
+                model=model,
+                scaler=scaler,
+                stops=stops,
+                direction=direction
             )
         except Exception as e:
             logger.error(f"Error creating LiveETAPredictorV5: {e}")
@@ -185,26 +219,19 @@ def get_v5_predictor(bus_id: int = 1, direction: str = "forward"):
 
     return _V5_PREDICTORS[bus_id]
 
+def predict_eta_with_ml(current_lat: float, current_lng: float, current_speed_kmh: float,
+                       target_lat: float, target_lng: float, target_stop_order: Optional[int] = None,
+                       direction_flag: Optional[int] = None, bus_id: int = 1) -> tuple[Optional[float], str]:
+    """
+    Predict ETA using V5 Keras LSTM Deep Learning Model with ExtraTrees fallback.
+    """
+    raw_eta = None
+    engine_name = "Physics Road Geometry Fallback"
 
-def _predict_eta_with_ml_full(
-    current_lat: float,
-    current_lng: float,
-    current_speed_kmh: float,
-    target_lat: float,
-    target_lng: float,
-    target_stop_order: Optional[int] = None,
-    direction_flag: Optional[int] = None,
-    bus_id: int = 1,
-) -> tuple[Optional[float], str]:
-    """
-    Internal: Predict ETA using V5 Keras LSTM Deep Learning Model with ExtraTrees fallback.
-    Returns (eta_minutes, prediction_engine_string).
-    """
-    # 1. Try V5 Akash Keras LSTM Predictor
+    # 1. Primary: Akash's V5 Keras LSTM Model
     try:
-        predictor = get_v5_predictor(
-            bus_id=bus_id, direction="forward" if direction_flag != 1 else "return"
-        )
+        resolved_direction = "return" if direction_flag == 1 else "forward"
+        predictor = get_v5_predictor(bus_id=bus_id, direction=resolved_direction)
         if predictor is not None:
             now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
             speed_mps = max(0.0, current_speed_kmh / 3.6)
@@ -213,189 +240,103 @@ def _predict_eta_with_ml_full(
                 latitude=current_lat,
                 longitude=current_lng,
                 speed_mps=speed_mps,
-                accuracy_m=3.0,
+                accuracy_m=3.0
             )
             if res.get("status") == "prediction" and "eta_minutes" in res:
-                return round(float(res["eta_minutes"]), 1), "V5 Akash Keras LSTM Model"
+                raw_eta = float(res["eta_minutes"])
+                engine_name = "V5 Akash Keras LSTM Model"
     except Exception as e:
         logger.error(f"V5 LSTM Inference Error: {e}")
 
-    # 2. ExtraTrees Model Fallback
-    model, metadata = _load_model()
-    if model is not None:
-        try:
-            closest_stop_id = 1
-            min_dist = float("inf")
-            for seq, name, slat, slon in ROUTE_STOPS:
-                d = haversine_distance(current_lat, current_lng, slat, slon)
-                if d < min_dist:
-                    min_dist = d
-                    closest_stop_id = seq
+    # 2. Secondary: ExtraTrees Model Fallback
+    if raw_eta is None:
+        model, metadata = _load_model()
+        if model is not None:
+            try:
+                closest_stop, min_dist = closest_stop_id(current_lat, current_lng)
 
-            target_stop_id = (
-                target_stop_order if target_stop_order is not None else closest_stop_id
-            )
-            if direction_flag is None:
-                direction_flag = 1 if target_stop_id < closest_stop_id else 0
+                target_stop_id = target_stop_order if target_stop_order is not None else closest_stop
+                if direction_flag is None:
+                    direction_flag = 1 if target_stop_id < closest_stop else 0
 
-            dist_to_target_km = haversine_distance(
-                current_lat, current_lng, target_lat, target_lng
-            )
-            stops_remaining = abs(target_stop_id - closest_stop_id)
-            total_stops = len(ROUTE_STOPS)
-            route_progress = round(
-                (
-                    (total_stops - closest_stop_id) / float(total_stops)
-                    if direction_flag == 1
-                    else closest_stop_id / float(total_stops)
-                ),
-                4,
-            )
-            now = datetime.now()
-            time_of_day_min = now.hour * 60 + now.minute
+                dist_to_target_km = haversine_distance(current_lat, current_lng, target_lat, target_lng)
+                stops_remaining = abs(target_stop_id - closest_stop)
+                total_stops = len(ROUTE_STOPS)
+                route_progress = round((total_stops - closest_stop) / float(total_stops) if direction_flag == 1 else closest_stop / float(total_stops), 4)
+                now = datetime.now()
+                time_of_day_min = now.hour * 60 + now.minute
 
-            import pandas as pd
+                import pandas as pd
+                feature_cols = [
+                    'direction_flag', 'curr_lat', 'curr_lon', 'curr_speed_kmh', 'bearing', 'elevation',
+                    'closest_stop_id', 'target_stop_id', 'stops_remaining',
+                    'dist_to_target_km', 'route_progress', 'time_of_day_min'
+                ]
+                features_df = pd.DataFrame([[
+                    direction_flag, current_lat, current_lng, current_speed_kmh, 0.0, 0.0,
+                    closest_stop, target_stop_id, stops_remaining,
+                    dist_to_target_km, route_progress, time_of_day_min
+                ]], columns=feature_cols)
 
-            feature_cols = [
-                "direction_flag",
-                "curr_lat",
-                "curr_lon",
-                "curr_speed_kmh",
-                "bearing",
-                "elevation",
-                "closest_stop_id",
-                "target_stop_id",
-                "stops_remaining",
-                "dist_to_target_km",
-                "route_progress",
-                "time_of_day_min",
-            ]
-            features_df = pd.DataFrame(
-                [
-                    [
-                        direction_flag,
-                        current_lat,
-                        current_lng,
-                        current_speed_kmh,
-                        0.0,
-                        0.0,
-                        closest_stop_id,
-                        target_stop_id,
-                        stops_remaining,
-                        dist_to_target_km,
-                        route_progress,
-                        time_of_day_min,
-                    ]
-                ],
-                columns=feature_cols,
-            )
+                raw_eta = float(model.predict(features_df)[0])
+                engine_name = "ExtraTrees ML Model"
+            except Exception as e:
+                logger.error(f"ExtraTrees fallback error: {e}")
 
-            pred_minutes = float(model.predict(features_df)[0])
-            return round(max(0.1, pred_minutes), 1), "ExtraTrees ML Model"
-        except Exception as e:
-            logger.error(f"ExtraTrees fallback error: {e}")
-
-    # 3. Physics Road Geometry fallback
+    # Physics Road Geometry bounds
     road_cum_map = _load_stop_road_distances()
-    closest_stop_id = 1
-    min_dist = float("inf")
-    for seq, name, slat, slon in ROUTE_STOPS:
-        d = haversine_distance(current_lat, current_lng, slat, slon)
-        if d < min_dist:
-            min_dist = d
-            closest_stop_id = seq
+    closest_stop, min_dist = closest_stop_id(current_lat, current_lng)
 
-    target_id = target_stop_order if target_stop_order is not None else closest_stop_id
-    bus_road_cum = (
-        road_cum_map.get(closest_stop_id, (closest_stop_id - 1) * 1.2) + min_dist
-    )
+    target_id = target_stop_order if target_stop_order is not None else closest_stop
+    bus_road_cum = road_cum_map.get(closest_stop, (closest_stop - 1) * 1.2) + min_dist
     target_road_cum = road_cum_map.get(target_id, (target_id - 1) * 1.2)
-    road_dist_km = max(0.0, target_road_cum - bus_road_cum)
-    stops_remaining = max(0, target_id - closest_stop_id)
+
+    if direction_flag == 1:
+        road_dist_km = max(0.0, bus_road_cum - target_road_cum)
+        stops_remaining = max(0, closest_stop - target_id)
+    else:
+        road_dist_km = max(0.0, target_road_cum - bus_road_cum)
+        stops_remaining = max(0, target_id - closest_stop)
+
+    min_phys_min = (road_dist_km / 65.0) * 60.0 + (stops_remaining * 0.1)
+    max_phys_min = (road_dist_km / 18.0) * 60.0 + (stops_remaining * 0.5)
+
+    if raw_eta is not None:
+        clamped_eta = round(min(max(raw_eta, min_phys_min), max_phys_min if max_phys_min > 0.5 else 60.0), 1)
+        return max(0.5, clamped_eta), engine_name
+
     effective_speed = current_speed_kmh if current_speed_kmh > 15.0 else 32.0
     travel_time_min = (road_dist_km / effective_speed) * 60.0
     dwell_time_min = stops_remaining * 0.4
-    return (
-        round(max(0.5, travel_time_min + dwell_time_min), 1),
-        "AI / ML Road Physics Ensemble",
-    )
+    return round(max(0.5, travel_time_min + dwell_time_min), 1), "AI / ML Road Physics Ensemble"
 
-
-def predict_eta_with_ml(
-    current_lat: float,
-    current_lng: float,
-    current_speed_kmh: float,
-    target_lat: float,
-    target_lng: float,
-    target_stop_order: Optional[int] = None,
-    direction_flag: Optional[int] = None,
-    bus_id: int = 1,
-) -> Optional[float]:
-    """
-    Public wrapper: return only the ETA minutes (or None) for callers that expect a numeric result.
-    """
-    eta, _engine = _predict_eta_with_ml_full(
-        current_lat,
-        current_lng,
-        current_speed_kmh,
-        target_lat,
-        target_lng,
-        target_stop_order,
-        direction_flag,
-        bus_id=bus_id,
-    )
-    return eta
-
-
-def calculate_eta(
-    current_lat: float,
-    current_lng: float,
-    current_speed_kmh: float,
-    target_lat: float,
-    target_lng: float,
-    target_stop_order: Optional[int] = None,
-    bus_id: int = 1,
-) -> Dict[str, Any]:
+def calculate_eta(current_lat: float, current_lng: float, current_speed_kmh: float,
+                  target_lat: float, target_lng: float, target_stop_order: Optional[int] = None,
+                  bus_id: int = 1, direction_flag: int = 0) -> Dict[str, Any]:
     """
     Calculates high-accuracy ETA using Akash's V5 Keras LSTM Model & ML Ensembles.
+
+    direction_flag: 0 for the forward leg (Thaliparamba -> Cherupuzha,
+    increasing stop order), 1 for the return leg (decreasing stop order).
+    Callers should derive this from recent GPS history via
+    `infer_direction()` rather than assuming forward travel.
     """
     road_cum_map = _load_stop_road_distances()
 
-    closest_stop_id = 1
-    min_dist = float("inf")
-    for seq, name, slat, slon in ROUTE_STOPS:
-        d = haversine_distance(current_lat, current_lng, slat, slon)
-        if d < min_dist:
-            min_dist = d
-            closest_stop_id = seq
+    closest_stop, min_dist = closest_stop_id(current_lat, current_lng)
 
-    target_id = target_stop_order if target_stop_order is not None else closest_stop_id
-    direction_flag = 0
+    target_id = target_stop_order if target_stop_order is not None else closest_stop
 
-    bus_road_cum = (
-        road_cum_map.get(closest_stop_id, (closest_stop_id - 1) * 1.2) + min_dist
-    )
+    bus_road_cum = road_cum_map.get(closest_stop, (closest_stop - 1) * 1.2) + min_dist
     target_road_cum = road_cum_map.get(target_id, (target_id - 1) * 1.2)
 
-    ml_eta, prediction_type = _predict_eta_with_ml_full(
-        current_lat,
-        current_lng,
-        current_speed_kmh,
-        target_lat,
-        target_lng,
-        target_stop_order,
-        bus_id=bus_id,
+    ml_eta, prediction_type = predict_eta_with_ml(
+        current_lat, current_lng, current_speed_kmh, target_lat, target_lng, target_stop_order,
+        direction_flag=direction_flag, bus_id=bus_id
     )
 
-    # For backwards compatibility with tests that expect 'Keras LSTM' in the engine name,
-    # include that substring if it isn't already present.
-    if prediction_type is None:
-        prediction_type = "Keras LSTM"
-    elif "Keras" not in prediction_type and "LSTM" not in prediction_type:
-        prediction_type = f"Keras LSTM ({prediction_type})"
-
     if direction_flag == 0:
-        if target_id < closest_stop_id:
+        if target_id < closest_stop:
             return {
                 "distance_km": 0.0,
                 "eta_minutes": 0.0,
@@ -406,7 +347,7 @@ def calculate_eta(
             }
         road_dist_km = max(0.0, target_road_cum - bus_road_cum)
     else:
-        if target_id > closest_stop_id:
+        if target_id > closest_stop:
             return {
                 "distance_km": 0.0,
                 "eta_minutes": 0.0,

@@ -8,13 +8,44 @@ import '../models/gps_location.dart';
 import '../models/route_details.dart';
 
 class ApiService {
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: ApiConstants.baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-    ),
-  );
+  late final Dio _dio;
+
+  ApiService() {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: ApiConstants.baseUrl,
+        connectTimeout: const Duration(seconds: 4),
+        receiveTimeout: const Duration(seconds: 5),
+      ),
+    );
+
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final prefs = await SharedPreferences.getInstance();
+          final customUrl = prefs.getString("custom_backend_url");
+          if (customUrl != null && customUrl.trim().isNotEmpty) {
+            final trimmed = customUrl.trim();
+            options.baseUrl = trimmed.endsWith('/')
+                ? trimmed.substring(0, trimmed.length - 1)
+                : trimmed;
+          }
+          return handler.next(options);
+        },
+      ),
+    );
+  }
+
+  Future<List<Bus>> getBuses() async {
+    try {
+      final response = await _dio.get("/api/buses/");
+      List data = response.data;
+      return data.map((e) => Bus.fromJson(e)).toList();
+    } catch (e) {
+      debugPrint("Get Buses Error: $e");
+      return searchBus("");
+    }
+  }
 
   Future<List<Bus>> searchBus(String query) async {
     try {
@@ -31,9 +62,14 @@ class ApiService {
     }
   }
 
-  Future<RouteDetails> getRouteDetails(int routeId) async {
-    final response = await _dio.get("/api/routes/$routeId/details/");
-    return RouteDetails.fromJson(response.data);
+  Future<RouteDetails?> getRouteDetails(int routeId) async {
+    try {
+      final response = await _dio.get("/api/routes/$routeId/details/");
+      return RouteDetails.fromJson(response.data);
+    } catch (e) {
+      debugPrint("Get Route Details Error: $e");
+      return null;
+    }
   }
 
   Future<GpsLocation?> getLatestGps(int busId) async {
@@ -83,13 +119,22 @@ class ApiService {
 
       debugPrint("GPS Upload Success: ${response.statusCode}");
     } on DioException catch (e) {
-      debugPrint(
-        "GPS Upload Error: ${e.response?.statusCode} - ${e.response?.data}",
-      );
+      debugPrint("GPS Upload Error: ${e.response?.statusCode} - ${e.response?.data}");
     }
   }
 
-  Future<Map<String, dynamic>> startJourney() async {
+  Future<List<Bus>> getAvailableBuses() async {
+    try {
+      final response = await _dio.get("/api/buses/available/");
+      List data = response.data;
+      return data.map((e) => Bus.fromJson(e)).toList();
+    } catch (e) {
+      debugPrint("Get Available Buses Error: $e");
+      return getBuses();
+    }
+  }
+
+  Future<Map<String, dynamic>> startJourney({int? busId}) async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString("token");
 
@@ -100,15 +145,15 @@ class ApiService {
     }
 
     if (token == null || token.isEmpty) {
-      return {
-        "success": false,
-        "error": "Authentication required. Please log in.",
-      };
+      return {"success": false, "error": "Authentication required. Please log in."};
     }
+
+    final int? targetBusId = busId ?? prefs.getInt("selected_bus_id");
 
     try {
       final response = await _dio.post(
         "/api/journey/start/",
+        data: targetBusId != null ? {"bus_id": targetBusId} : {},
         options: Options(headers: {"Authorization": "Token $token"}),
       );
 
@@ -118,10 +163,7 @@ class ApiService {
         "data": response.data,
       };
     } on DioException catch (e) {
-      final errorMsg =
-          e.response?.data?["error"] ??
-          e.response?.data?["detail"] ??
-          "Server error (${e.response?.statusCode})";
+      final errorMsg = e.response?.data?["error"] ?? e.response?.data?["detail"] ?? "Server error (${e.response?.statusCode})";
       debugPrint("Start Journey Error: $errorMsg");
       return {"success": false, "error": errorMsg};
     } catch (e) {

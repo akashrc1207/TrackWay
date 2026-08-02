@@ -15,123 +15,57 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="Bus",
+            name='Bus',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("bus_number", models.CharField(max_length=20, unique=True)),
-                ("capacity", models.PositiveIntegerField()),
-                ("status", models.CharField(default="Active", max_length=20)),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('bus_number', models.CharField(max_length=20, unique=True)),
+                ('capacity', models.PositiveIntegerField()),
+                ('status', models.CharField(default='Active', max_length=20)),
             ],
         ),
         migrations.CreateModel(
-            name="Route",
+            name='Route',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("route_name", models.CharField(max_length=100)),
-                ("start_location", models.CharField(max_length=100)),
-                ("end_location", models.CharField(max_length=100)),
-                ("total_distance", models.FloatField()),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('route_name', models.CharField(max_length=100)),
+                ('start_location', models.CharField(max_length=100)),
+                ('end_location', models.CharField(max_length=100)),
+                ('total_distance', models.FloatField()),
             ],
         ),
         migrations.CreateModel(
-            name="Driver",
+            name='Driver',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("phone", models.CharField(max_length=15, unique=True)),
-                (
-                    "assigned_bus",
-                    models.OneToOneField(
-                        blank=True,
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        to="api.bus",
-                    ),
-                ),
-                (
-                    "user",
-                    models.OneToOneField(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to=settings.AUTH_USER_MODEL,
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('phone', models.CharField(max_length=15, unique=True)),
+                ('assigned_bus', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='api.bus')),
+                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.CreateModel(
-            name="GPSLog",
+            name='GPSLog',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("latitude", models.FloatField()),
-                ("longitude", models.FloatField()),
-                ("speed", models.FloatField()),
-                ("timestamp", models.DateTimeField(auto_now_add=True)),
-                (
-                    "bus",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.bus"
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('latitude', models.FloatField()),
+                ('longitude', models.FloatField()),
+                ('speed', models.FloatField()),
+                ('timestamp', models.DateTimeField(auto_now_add=True)),
+                ('bus', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.bus')),
             ],
         ),
         migrations.CreateModel(
-            name="BusStop",
+            name='BusStop',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("stop_name", models.CharField(max_length=100)),
-                ("latitude", models.FloatField()),
-                ("longitude", models.FloatField()),
-                (
-                    "route",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.route"
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('stop_name', models.CharField(max_length=100)),
+                ('latitude', models.FloatField()),
+                ('longitude', models.FloatField()),
+                ('route', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.route')),
             ],
         ),
         migrations.AddField(
-            model_name="bus",
-            name="route",
-            field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, to="api.route"
-            ),
+            model_name='bus',
+            name='route',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.route'),
         ),
     ]

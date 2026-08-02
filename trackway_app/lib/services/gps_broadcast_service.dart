@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/app_config.dart';
 import 'api_service.dart';
+import 'location_permission_service.dart';
 
 class GpsBroadcastService extends ChangeNotifier {
   static final GpsBroadcastService _instance = GpsBroadcastService._internal();
@@ -16,6 +18,7 @@ class GpsBroadcastService extends ChangeNotifier {
   bool _isBroadcasting = false;
   int? _activeJourneyId;
   Position? _currentPosition;
+  Position? _lastValidPosition;
   Timer? _timer;
 
   bool get isBroadcasting => _isBroadcasting;
@@ -29,9 +32,7 @@ class GpsBroadcastService extends ChangeNotifier {
       _activeJourneyId = prefs.getInt("active_journey_id");
 
       if (_isBroadcasting && _timer == null) {
-        debugPrint(
-          "Restoring active GPS broadcast session (Journey #$_activeJourneyId)...",
-        );
+        debugPrint("Restoring active GPS broadcast session (Journey #$_activeJourneyId)...");
         _startTimer();
         sendGps();
       }
@@ -51,11 +52,27 @@ class GpsBroadcastService extends ChangeNotifier {
     if (!_isBroadcasting) return;
 
     try {
+      final permissionResult = await ensureLocationPermission();
+      if (!permissionResult.granted) {
+        debugPrint("Location permission unavailable: ${permissionResult.errorMessage}. Skipping upload.");
+        return;
+      }
+
       Position? position;
       try {
-        position = await Geolocator.getLastKnownPosition();
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 10),
+          ),
+        );
       } catch (e) {
-        debugPrint("Geolocator position check error: $e");
+        debugPrint("getCurrentPosition failed ($e), falling back to last known position.");
+        try {
+          position = await Geolocator.getLastKnownPosition();
+        } catch (e2) {
+          debugPrint("Geolocator last-known position check error: $e2");
+        }
       }
 
       if (position == null) {
@@ -63,6 +80,36 @@ class GpsBroadcastService extends ChangeNotifier {
         return;
       }
 
+      // 1. Accuracy Check
+      if (position.accuracy > AppConfig.maxGpsAccuracyMeters) {
+        debugPrint("Rejecting GPS log: Low accuracy (${position.accuracy.toStringAsFixed(1)}m > ${AppConfig.maxGpsAccuracyMeters}m)");
+        return;
+      }
+
+      // 2. Jump and Implied Speed Check against last valid upload
+      if (_lastValidPosition != null) {
+        final distMeters = Geolocator.distanceBetween(
+          _lastValidPosition!.latitude,
+          _lastValidPosition!.longitude,
+          position.latitude,
+          position.longitude,
+        );
+        final dtSec = position.timestamp.difference(_lastValidPosition!.timestamp).inMilliseconds / 1000.0;
+
+        if (dtSec > 0 && dtSec <= 120.0 && distMeters <= 10000.0) {
+          final impliedSpeedKmh = (distMeters / dtSec) * 3.6;
+          if (impliedSpeedKmh > AppConfig.maxSpeedKmh) {
+            debugPrint("Rejecting GPS log: Implied speed impossible (${impliedSpeedKmh.toStringAsFixed(1)} km/h > ${AppConfig.maxSpeedKmh} km/h)");
+            return;
+          }
+          if (dtSec <= 3.5 && distMeters > AppConfig.maxJumpMetersPer3Sec) {
+            debugPrint("Rejecting GPS log: Distance jump impossible (${distMeters.toStringAsFixed(1)}m > ${AppConfig.maxJumpMetersPer3Sec}m in ${dtSec.toStringAsFixed(1)}s)");
+            return;
+          }
+        }
+      }
+
+      _lastValidPosition = position;
       _currentPosition = position;
       final speedKmh = position.speed * 3.6;
 
@@ -79,6 +126,14 @@ class GpsBroadcastService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> startBroadcast() async {
+    final permissionResult = await ensureLocationPermission();
+    if (!permissionResult.granted) {
+      return {
+        "success": false,
+        "error": permissionResult.errorMessage ?? "Location permission is required to start broadcasting.",
+      };
+    }
+
     final result = await _apiService.startJourney();
 
     if (result["success"] == true) {

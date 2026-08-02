@@ -1,10 +1,72 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_theme.dart';
 import '../home/home_screen.dart';
 import 'driver_login.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
+
+  void _showServerConfigDialog(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentUrl = prefs.getString("custom_backend_url") ?? "http://10.0.2.2:8000";
+    final controller = TextEditingController(text: currentUrl);
+
+    if (!context.mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.dns_rounded, color: AppTheme.primaryEmerald),
+            SizedBox(width: 10),
+            Text("Server Settings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Enter your server URL or PC IP address for physical phone testing:",
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                labelText: "Backend Server URL",
+                hintText: "e.g. http://192.168.1.50:8000",
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.link_rounded),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await prefs.remove("custom_backend_url");
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text("Reset Default"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryEmerald, foregroundColor: Colors.white),
+            onPressed: () async {
+              final url = controller.text.trim();
+              if (url.isNotEmpty) {
+                await prefs.setString("custom_backend_url", url);
+              }
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
+            child: const Text("Save & Connect"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,21 +75,30 @@ class LoginScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
+            // Top Server Settings Action Bar
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0, top: 8.0),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: const Icon(Icons.settings_rounded, color: AppTheme.primaryEmerald, size: 28),
+                  tooltip: "Configure Server IP / Host",
+                  onPressed: () => _showServerConfigDialog(context),
+                ),
+              ),
+            ),
+
             // Emerald Banner Header
             Expanded(
               flex: 5,
               child: Container(
                 width: double.infinity,
-                margin: const EdgeInsets.all(16),
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.primaryEmerald,
-                      Color(0xFF047857),
-                      Color(0xFF064E3B),
-                    ],
+                    colors: [AppTheme.primaryEmerald, Color(0xFF047857), Color(0xFF064E3B)],
                   ),
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
@@ -66,10 +137,7 @@ class LoginScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 5,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
@@ -93,10 +161,7 @@ class LoginScreen extends StatelessWidget {
             Expanded(
               flex: 4,
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 16.0,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,16 +175,16 @@ class LoginScreen extends StatelessWidget {
                         color: AppTheme.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     const Text(
-                      "Select your mode to continue",
+                      "Choose your interface mode to continue",
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         color: AppTheme.textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 24),
 
                     // Passenger Mode Button
                     ElevatedButton.icon(
@@ -128,9 +193,7 @@ class LoginScreen extends StatelessWidget {
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         elevation: 3,
-                        shadowColor: AppTheme.primaryEmerald.withValues(
-                          alpha: 0.35,
-                        ),
+                        shadowColor: AppTheme.primaryEmerald.withValues(alpha: 0.35),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
@@ -138,10 +201,7 @@ class LoginScreen extends StatelessWidget {
                       icon: const Icon(Icons.directions_bus_filled_rounded),
                       label: const Text(
                         "Passenger",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                       onPressed: () {
                         Navigator.of(context).push(
@@ -156,18 +216,12 @@ class LoginScreen extends StatelessWidget {
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: const BorderSide(
-                          color: AppTheme.primaryEmerald,
-                          width: 2,
-                        ),
+                        side: const BorderSide(color: AppTheme.primaryEmerald, width: 2),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      icon: const Icon(
-                        Icons.badge_rounded,
-                        color: AppTheme.primaryEmerald,
-                      ),
+                      icon: const Icon(Icons.badge_rounded, color: AppTheme.primaryEmerald),
                       label: const Text(
                         "Driver Login Portal",
                         style: TextStyle(
@@ -178,9 +232,7 @@ class LoginScreen extends StatelessWidget {
                       ),
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const DriverLogin(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const DriverLogin()),
                         );
                       },
                     ),

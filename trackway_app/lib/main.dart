@@ -6,7 +6,11 @@ import 'services/gps_broadcast_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await GpsBroadcastService.instance.init();
+  try {
+    await GpsBroadcastService.instance.init();
+  } catch (e) {
+    debugPrint("Startup initialization error: $e");
+  }
   runApp(const TrackWayApp());
 }
 

@@ -5,6 +5,7 @@ import '../../config/app_theme.dart';
 import '../../services/gps_broadcast_service.dart';
 import '../home/home_screen.dart';
 import '../login/login_screen.dart';
+import 'bus_selection_screen.dart';
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -15,8 +16,9 @@ class DriverDashboard extends StatefulWidget {
 
 class _DriverDashboardState extends State<DriverDashboard> {
   String username = "driver1";
-  String busName = "Nayana";
-  String busNumber = "KL 59 N 4005";
+  String busName = "";
+  String busNumber = "";
+  String routeName = "";
 
   @override
   void initState() {
@@ -43,8 +45,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
     if (!mounted) return;
     setState(() {
       username = prefs.getString("username") ?? "driver1";
-      busName = prefs.getString("bus_name") ?? "Nayana";
-      busNumber = prefs.getString("bus_number") ?? "KL 59 N 4005";
+      busName = prefs.getString("bus_name") ?? "";
+      busNumber = prefs.getString("bus_number") ?? "";
+      routeName = prefs.getString("route_name") ?? "";
     });
   }
 
@@ -58,16 +61,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
       backgroundColor: AppTheme.bgMint,
       appBar: AppBar(
         backgroundColor: AppTheme.bgMint,
-        title: const Text(
-          "Driver Control Hub",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Driver Control Hub", style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.home_rounded,
-              color: AppTheme.primaryEmerald,
-            ),
+            icon: const Icon(Icons.home_rounded, color: AppTheme.primaryEmerald),
             tooltip: "Passenger View",
             onPressed: () {
               Navigator.push(
@@ -102,11 +99,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
             Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [
-                    AppTheme.primaryEmerald,
-                    Color(0xFF047857),
-                    Color(0xFF064E3B),
-                  ],
+                  colors: [AppTheme.primaryEmerald, Color(0xFF047857), Color(0xFF064E3B)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -129,11 +122,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
-                        Icons.badge_rounded,
-                        color: Colors.white,
-                        size: 36,
-                      ),
+                      child: const Icon(Icons.badge_rounded, color: Colors.white, size: 36),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -151,36 +140,32 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(
-                                Icons.directions_bus_rounded,
-                                color: Color(0xFFD1FAE5),
-                                size: 16,
-                              ),
+                              const Icon(Icons.directions_bus_rounded, color: Color(0xFFD1FAE5), size: 16),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  busName.isNotEmpty
-                                      ? "Assigned: $busName ($busNumber)"
-                                      : "Assigned: $busNumber",
+                                  busName.isNotEmpty ? "Selected: $busName ($busNumber)" : (busNumber.isNotEmpty ? "Selected: $busNumber" : "No bus selected"),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xFFD1FAE5),
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: const TextStyle(color: Color(0xFFD1FAE5), fontSize: 13, fontWeight: FontWeight.w600),
                                 ),
                               ),
                             ],
                           ),
+                          if (routeName.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              "Route: $routeName",
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Color(0xFFA7F3D0), fontSize: 11),
+                            ),
+                          ],
                         ],
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
                         color: tripStarted ? Colors.white : Colors.white24,
                         borderRadius: BorderRadius.circular(20),
@@ -188,9 +173,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       child: Text(
                         tripStarted ? "ON DUTY" : "OFF DUTY",
                         style: TextStyle(
-                          color: tripStarted
-                              ? AppTheme.primaryEmeraldDark
-                              : Colors.white,
+                          color: tripStarted ? AppTheme.primaryEmeraldDark : Colors.white,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -201,35 +184,40 @@ class _DriverDashboardState extends State<DriverDashboard> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 14),
+
+            // Change Bus Option (if off duty)
+            if (!tripStarted)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const BusSelectionScreen()),
+                    );
+                  },
+                  icon: const Icon(Icons.swap_horiz_rounded, color: AppTheme.primaryEmerald),
+                  label: const Text("Change Selected Bus", style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryEmerald)),
+                ),
+              ),
+
+            const SizedBox(height: 10),
 
             // Live Duty Toggle Button
             SizedBox(
               height: 56,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: tripStarted
-                      ? Colors.redAccent
-                      : AppTheme.primaryEmerald,
+                  backgroundColor: tripStarted ? Colors.redAccent : AppTheme.primaryEmerald,
                   foregroundColor: Colors.white,
                   elevation: 3,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                icon: Icon(
-                  tripStarted
-                      ? Icons.stop_circle_rounded
-                      : Icons.play_circle_fill_rounded,
-                  size: 28,
-                ),
+                icon: Icon(tripStarted ? Icons.stop_circle_rounded : Icons.play_circle_fill_rounded, size: 28),
                 label: Text(
-                  tripStarted ? "END TRIP BROADCAST" : "START TRIP BROADCAST",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
+                  tripStarted ? "END TRIP & RELEASE BUS" : "START TRIP BROADCAST",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
                 ),
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
@@ -240,10 +228,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       if (!mounted) return;
                       messenger.showSnackBar(
                         SnackBar(
-                          content: Text(
-                            result["error"] ??
-                                "Could not start journey session",
-                          ),
+                          content: Text(result["error"] ?? "Could not start journey session"),
+                          backgroundColor: Colors.redAccent,
                         ),
                       );
                       return;
@@ -253,12 +239,22 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     if (!stopped) {
                       if (!mounted) return;
                       messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text("Could not stop journey session"),
-                        ),
+                        const SnackBar(content: Text("Could not stop journey session")),
                       );
                       return;
                     }
+
+                    // Clear selected bus and return to BusSelectionScreen
+                    final nav = Navigator.of(context);
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.remove("selected_bus_id");
+                    await prefs.remove("bus_name");
+                    await prefs.remove("bus_number");
+                    await prefs.remove("route_name");
+
+                    nav.pushReplacement(
+                      MaterialPageRoute(builder: (_) => const BusSelectionScreen()),
+                    );
                   }
                 },
               ),
@@ -268,11 +264,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
             const Text(
               "Live Telemetry Stream",
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
             ),
 
             const SizedBox(height: 12),
@@ -286,9 +278,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     title: "Broadcast Signal",
                     value: tripStarted ? "Streaming" : "Paused",
                     subtitle: tripStarted ? "Interval 4 sec" : "GPS Inactive",
-                    valueColor: tripStarted
-                        ? AppTheme.successGreen
-                        : AppTheme.textSecondary,
+                    valueColor: tripStarted ? AppTheme.successGreen : AppTheme.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -330,10 +320,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       color: AppTheme.mintContainer,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(
-                      Icons.my_location_rounded,
-                      color: AppTheme.primaryEmerald,
-                    ),
+                    child: const Icon(Icons.my_location_rounded, color: AppTheme.primaryEmerald),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -342,10 +329,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       children: [
                         const Text(
                           "GPS Coordinates",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
-                          ),
+                          style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -414,24 +398,14 @@ class TelemetryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
-          ),
+          Text(title, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
           const SizedBox(height: 4),
           Text(
             value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: valueColor,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: valueColor),
           ),
           const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
-          ),
+          Text(subtitle, style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
         ],
       ),
     );
