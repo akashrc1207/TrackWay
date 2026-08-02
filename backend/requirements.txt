@@ -1,0 +1,18 @@
+# TrackWay Django Backend Production Dependencies
+
+# Core Web Framework & REST API
+Django>=5.0,<6.0
+djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.3.1
+django-cors-headers>=4.3.1
+
+# Machine Learning & AI Prediction Engine
+numpy>=1.26.4
+pandas>=2.2.0
+scikit-learn>=1.4.0
+joblib>=1.3.2
+tensorflow>=2.16.1
+
+# Production Infrastructure (PostgreSQL 16 & Gunicorn WSGI Server)
+psycopg2-binary>=2.9.9
+gunicorn>=21.2.0
