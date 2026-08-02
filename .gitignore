@@ -5,6 +5,8 @@ backend/venv/
 backend/db.sqlite3
 *.joblib
 *.keras
+!backend/api/ml_models/eta_lstm_v5.keras
+!backend/api/ml_models/feature_scaler_v5.joblib
 
 
 # Flutter
