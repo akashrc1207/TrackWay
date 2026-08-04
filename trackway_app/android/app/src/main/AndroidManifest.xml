@@ -34,6 +34,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Required by geolocator for Android 14 (API 34+) location foreground service -->
+        <service
+            android:name="com.baseflow.geolocator.stop.StopLocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

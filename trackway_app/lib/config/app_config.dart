@@ -22,6 +22,9 @@ class AppConfig {
   /// Seconds before a GPS signal is flagged as "lost" (offline)
   static const int signalLostThresholdSec = 45;
 
+  /// Maximum allowable distance in meters from a route terminal to start a journey
+  static const double startRadiusMeters = 150.0;
+
   /// Rolling position queue max capacity for smooth map animation
   static const int positionQueueCapacity = 5;
 }

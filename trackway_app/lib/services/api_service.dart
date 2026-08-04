@@ -14,8 +14,8 @@ class ApiService {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
-        connectTimeout: const Duration(seconds: 4),
-        receiveTimeout: const Duration(seconds: 5),
+        connectTimeout: const Duration(seconds: 10),
+        receiveTimeout: const Duration(seconds: 10),
       ),
     );
 
@@ -104,10 +104,8 @@ class ApiService {
     String? token = prefs.getString("token");
 
     if (token == null || token.isEmpty) {
-      debugPrint("No auth token found, attempting auto-login as driver1...");
-      final loginData = await login("driver1", "driver123");
-      token = loginData?["token"];
-      if (token == null) return;
+      debugPrint("GPS Upload Error: Authentication token missing. Skipping upload.");
+      return;
     }
 
     try {
@@ -134,26 +132,30 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> startJourney({int? busId}) async {
+  Future<Map<String, dynamic>> startJourney({
+    int? busId,
+    double? latitude,
+    double? longitude,
+    String? direction,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString("token");
 
     if (token == null || token.isEmpty) {
-      debugPrint("No token for startJourney, auto-authenticating driver1...");
-      final loginData = await login("driver1", "driver123");
-      token = loginData?["token"];
-    }
-
-    if (token == null || token.isEmpty) {
-      return {"success": false, "error": "Authentication required. Please log in."};
+      return {"success": false, "error": "Authentication required. Please log in as a driver."};
     }
 
     final int? targetBusId = busId ?? prefs.getInt("selected_bus_id");
+    final Map<String, dynamic> payload = {};
+    if (targetBusId != null) payload["bus_id"] = targetBusId;
+    if (latitude != null) payload["latitude"] = latitude;
+    if (longitude != null) payload["longitude"] = longitude;
+    if (direction != null) payload["direction"] = direction;
 
     try {
       final response = await _dio.post(
         "/api/journey/start/",
-        data: targetBusId != null ? {"bus_id": targetBusId} : {},
+        data: payload,
         options: Options(headers: {"Authorization": "Token $token"}),
       );
 
@@ -163,7 +165,13 @@ class ApiService {
         "data": response.data,
       };
     } on DioException catch (e) {
-      final errorMsg = e.response?.data?["error"] ?? e.response?.data?["detail"] ?? "Server error (${e.response?.statusCode})";
+      final resData = e.response?.data;
+      String errorMsg = "Server error (${e.response?.statusCode ?? 'unknown'})";
+      if (resData is Map) {
+        errorMsg = resData["error"]?.toString() ?? resData["detail"]?.toString() ?? errorMsg;
+      } else if (resData is String && resData.isNotEmpty) {
+        errorMsg = resData;
+      }
       debugPrint("Start Journey Error: $errorMsg");
       return {"success": false, "error": errorMsg};
     } catch (e) {
@@ -204,17 +212,42 @@ class ApiService {
 
       await prefs.setString("token", data["token"] ?? "");
       await prefs.setString("username", data["username"] ?? "");
-      if (data["bus_name"] != null) {
-        await prefs.setString("bus_name", data["bus_name"]);
-      }
-      if (data["bus_number"] != null) {
-        await prefs.setString("bus_number", data["bus_number"]);
-      }
 
       return data;
     } catch (e) {
       debugPrint("Login Error: $e");
       return null;
     }
+  }
+
+  Future<Map<String, dynamic>?> getActiveJourney() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString("token");
+    debugPrint("[DEBUG_LOG] getActiveJourney using token: $token");
+    if (token == null || token.isEmpty) return null;
+
+    try {
+      final response = await _dio.get(
+        "/api/journey/active/",
+        options: Options(headers: {"Authorization": "Token $token"}),
+      );
+      debugPrint("[DEBUG_LOG] GET /api/journey/active/ HTTP Status: ${response.statusCode}");
+      debugPrint("[DEBUG_LOG] GET /api/journey/active/ Response Data: ${response.data}");
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        if (data["has_active_journey"] == true) {
+          if (data["bus_name"] != null) await prefs.setString("bus_name", data["bus_name"].toString());
+          if (data["bus_number"] != null) await prefs.setString("bus_number", data["bus_number"].toString());
+          if (data["route_name"] != null) await prefs.setString("route_name", data["route_name"].toString());
+          if (data["bus_id"] != null) await prefs.setInt("selected_bus_id", int.parse(data["bus_id"].toString()));
+          if (data["journey_id"] != null) await prefs.setInt("active_journey_id", int.parse(data["journey_id"].toString()));
+          await prefs.setBool("is_broadcasting", true);
+        }
+        return data;
+      }
+    } catch (e) {
+      debugPrint("[DEBUG_LOG] Get Active Journey Exception: $e");
+    }
+    return null;
   }
 }

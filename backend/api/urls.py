@@ -14,6 +14,7 @@ urlpatterns = [
     path("search/", views.search_bus, name="search-bus"),
     path("journey/start/", views.start_journey, name="start-journey"),
     path("journey/stop/", views.stop_journey, name="stop-journey"),
+    path("journey/active/", views.active_journey, name="active-journey"),
     path("auth/login/", views.login_driver, name="auth-login"),
     path("buses/<int:bus_id>/eta/", views.get_bus_eta, name="bus-eta"),
     path("metrics/", views.metrics_summary, name="metrics-summary"),

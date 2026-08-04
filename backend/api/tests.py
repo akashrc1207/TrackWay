@@ -127,6 +127,9 @@ class DynamicBusSelectionTest(TestCase):
             end_location="Cherupuzha",
             total_distance=45.0
         )
+        self.stop1 = BusStop.objects.create(route=self.route, stop_order=1, stop_name="Thaliparamba", latitude=12.0369964, longitude=75.3600476)
+        self.stop38 = BusStop.objects.create(route=self.route, stop_order=38, stop_name="Cherupuzha", latitude=12.2746351, longitude=75.3637389)
+
         self.bus1 = Bus.objects.create(
             bus_name="Nayana",
             bus_number="KL-59-N-4005",
@@ -153,7 +156,7 @@ class DynamicBusSelectionTest(TestCase):
 
         # 1. Driver 1 starts journey on Bus 1
         start_url = reverse("start-journey")
-        res = self.client.post(start_url, {"bus_id": self.bus1.id}, format="json")
+        res = self.client.post(start_url, {"bus_id": self.bus1.id, "latitude": 12.0369964, "longitude": 75.3600476}, format="json")
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
         # 2. Available buses should now exclude Bus 1
@@ -179,3 +182,124 @@ class DynamicBusSelectionTest(TestCase):
         res_avail_after = self.client.get(avail_url)
         avail_ids_after = [b["id"] for b in res_avail_after.json()]
         self.assertIn(self.bus1.id, avail_ids_after)
+
+    def test_missing_bus_id_validation(self):
+        self.client.force_authenticate(user=self.user1)
+        start_url = reverse("start-journey")
+        res = self.client.post(start_url, {}, format="json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res.json().get("error"), "bus_id is required to start a journey.")
+
+class ConcurrentMultiBusTest(TestCase):
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from api.models import Driver
+        self.route = Route.objects.create(
+            route_name="Thaliparamba - Cherupuzha",
+            start_location="Thaliparamba",
+            end_location="Cherupuzha",
+            total_distance=45.1
+        )
+        self.stop1 = BusStop.objects.create(route=self.route, stop_order=1, stop_name="Thaliparamba", latitude=12.0369964, longitude=75.3600476)
+        self.stop38 = BusStop.objects.create(route=self.route, stop_order=38, stop_name="Cherupuzha", latitude=12.2746351, longitude=75.3637389)
+
+        self.busA = Bus.objects.create(bus_name="Nayana", bus_number="KL-59-N-4005", capacity=52, route=self.route)
+        self.busB = Bus.objects.create(bus_name="Holy Angel", bus_number="KL-59-M-6555", capacity=48, route=self.route)
+        self.busC = Bus.objects.create(bus_name="Big Show", bus_number="KL-59-Z-8499", capacity=55, route=self.route)
+
+        self.user1 = User.objects.create_user(username="driver1", password="driver123")
+        self.user2 = User.objects.create_user(username="driver2", password="driver123")
+        self.user3 = User.objects.create_user(username="driver3", password="driver123")
+
+        self.driver1 = Driver.objects.create(user=self.user1, phone="+919876543210")
+        self.driver2 = Driver.objects.create(user=self.user2, phone="+919876543211")
+        self.driver3 = Driver.objects.create(user=self.user3, phone="+919876543212")
+
+    def test_three_buses_concurrent_operation(self):
+        start_url = reverse("start-journey")
+        update_gps_url = reverse("gps-update")
+
+        client1 = APIClient()
+        client1.force_authenticate(user=self.user1)
+        res1 = client1.post(start_url, {"bus_id": self.busA.id, "latitude": 12.0369964, "longitude": 75.3600476}, format="json")
+        self.assertEqual(res1.status_code, status.HTTP_201_CREATED)
+
+        client2 = APIClient()
+        client2.force_authenticate(user=self.user2)
+        res2 = client2.post(start_url, {"bus_id": self.busB.id, "latitude": 12.0369964, "longitude": 75.3600476}, format="json")
+        self.assertEqual(res2.status_code, status.HTTP_201_CREATED)
+
+        client3 = APIClient()
+        client3.force_authenticate(user=self.user3)
+        res3 = client3.post(start_url, {"bus_id": self.busC.id, "latitude": 12.0369964, "longitude": 75.3600476}, format="json")
+        self.assertEqual(res3.status_code, status.HTTP_201_CREATED)
+
+        # Upload distinct GPS coordinates for each bus
+        gps1 = client1.post(update_gps_url, {"latitude": 12.0400, "longitude": 75.3650, "speed": 40.0, "accuracy": 5.0}, format="json")
+        self.assertEqual(gps1.status_code, status.HTTP_201_CREATED)
+
+        gps2 = client2.post(update_gps_url, {"latitude": 12.1000, "longitude": 75.4000, "speed": 45.0, "accuracy": 5.0}, format="json")
+        self.assertEqual(gps2.status_code, status.HTTP_201_CREATED)
+
+        gps3 = client3.post(update_gps_url, {"latitude": 12.1500, "longitude": 75.4400, "speed": 50.0, "accuracy": 5.0}, format="json")
+        self.assertEqual(gps3.status_code, status.HTTP_201_CREATED)
+
+        # Verify GPS logs are strictly isolated per bus
+        self.assertEqual(GPSLog.objects.filter(bus=self.busA).last().latitude, 12.0400)
+        self.assertEqual(GPSLog.objects.filter(bus=self.busB).last().latitude, 12.1000)
+        self.assertEqual(GPSLog.objects.filter(bus=self.busC).last().latitude, 12.1500)
+
+        # Verify passenger latest GPS endpoint yields exact bus data
+        client_p = APIClient()
+        latest_a = client_p.get(reverse("latest-gps", kwargs={"bus_id": self.busA.id})).json()
+        latest_b = client_p.get(reverse("latest-gps", kwargs={"bus_id": self.busB.id})).json()
+        latest_c = client_p.get(reverse("latest-gps", kwargs={"bus_id": self.busC.id})).json()
+
+        self.assertEqual(latest_a["latitude"], 12.0400)
+        self.assertEqual(latest_b["latitude"], 12.1000)
+        self.assertEqual(latest_c["latitude"], 12.1500)
+
+    def test_active_journey_endpoint_and_isolation(self):
+        active_url = reverse("active-journey")
+        start_url = reverse("start-journey")
+
+        client1 = APIClient()
+        client1.force_authenticate(user=self.user1)
+
+        client2 = APIClient()
+        client2.force_authenticate(user=self.user2)
+
+        # Initially, neither driver has an active journey
+        res1_before = client1.get(active_url).json()
+        self.assertFalse(res1_before["has_active_journey"])
+
+        res2_before = client2.get(active_url).json()
+        self.assertFalse(res2_before["has_active_journey"])
+
+        # Driver 1 starts Bus A
+        res_start1 = client1.post(start_url, {"bus_id": self.busA.id, "latitude": 12.0369964, "longitude": 75.3600476}, format="json")
+        self.assertEqual(res_start1.status_code, status.HTTP_201_CREATED)
+
+        # Driver 1 active journey endpoint returns Bus A
+        res1_after = client1.get(active_url).json()
+        self.assertTrue(res1_after["has_active_journey"])
+        self.assertEqual(res1_after["bus_id"], self.busA.id)
+        self.assertEqual(res1_after["bus_name"], "Nayana")
+        self.assertEqual(res1_after["driver_username"], "driver1")
+
+        # Driver 2 active journey endpoint still returns False (Strict Isolation!)
+        res2_after = client2.get(active_url).json()
+        self.assertFalse(res2_after["has_active_journey"])
+
+        # Driver 2 starts Bus B
+        res_start2 = client2.post(start_url, {"bus_id": self.busB.id, "latitude": 12.0369964, "longitude": 75.3600476}, format="json")
+        self.assertEqual(res_start2.status_code, status.HTTP_201_CREATED)
+
+        # Driver 2 active journey endpoint now returns Bus B
+        res2_final = client2.get(active_url).json()
+        self.assertTrue(res2_final["has_active_journey"])
+        self.assertEqual(res2_final["bus_id"], self.busB.id)
+        self.assertEqual(res2_final["bus_name"], "Holy Angel")
+        self.assertEqual(res2_final["driver_username"], "driver2")
+

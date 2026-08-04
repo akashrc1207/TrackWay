@@ -15,14 +15,29 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("Seeding TrackWay database...")
 
-        # 1. Create Driver User
-        driver_user, created = User.objects.get_or_create(username="driver1")
-        if created:
-            driver_user.set_password("driver123")
-            driver_user.first_name = "John"
-            driver_user.last_name = "Doe"
-            driver_user.save()
-            self.stdout.write("Created user: driver1 (password: driver123)")
+        # 1. Create Driver Users and Driver Profiles
+        drivers_data = [
+            {"username": "driver1", "first_name": "Driver", "last_name": "One", "phone": "+919876543210"},
+            {"username": "driver2", "first_name": "Driver", "last_name": "Two", "phone": "+919876543211"},
+            {"username": "driver3", "first_name": "Driver", "last_name": "Three", "phone": "+919876543212"},
+        ]
+
+        for d_info in drivers_data:
+            user, created = User.objects.get_or_create(username=d_info["username"])
+            if created or not user.has_usable_password():
+                user.set_password("driver123")
+                user.first_name = d_info["first_name"]
+                user.last_name = d_info["last_name"]
+                user.save()
+                self.stdout.write(f"Created user: {user.username} (password: driver123)")
+
+            Driver.objects.get_or_create(
+                user=user,
+                defaults={
+                    "phone": d_info["phone"],
+                    "assigned_bus": None,
+                }
+            )
 
         # 2. Get or Create the Real Route
         # 45.1 km matches the road-distance total baked into
@@ -42,8 +57,7 @@ class Command(BaseCommand):
         # 3. Seed the real 38 bus stops from the same bus_stops.csv the LSTM
         # model and ETA engine use, so the route shown in the app always
         # matches what the ETA/direction logic is actually calculating
-        # against. (The old version of this command hardcoded 3 fake stops
-        # with different coordinates than the rest of the system.)
+        # against.
         ml_models_dir = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
             "ml_models",
@@ -94,30 +108,19 @@ class Command(BaseCommand):
             )
             buses.append(bus)
 
-        # 5. Assign the driver to the first bus
-        driver, _ = Driver.objects.get_or_create(
-            user=driver_user,
-            defaults={
-                "phone": "+919876543210",
-                "assigned_bus": buses[0],
-            }
-        )
-        if driver.assigned_bus != buses[0]:
-            driver.assigned_bus = buses[0]
-            driver.save()
-
-        # 6. Create an initial GPS log at the route's starting stop, so a
-        # freshly-seeded bus has *some* live position before a real driver
-        # session or the run_demo simulator starts broadcasting.
+        # 5. Create initial GPS logs at the route's starting stop for all fleet buses
+        # so freshly-seeded buses have a baseline live position before trips start.
         first_stop = BusStop.objects.filter(route=route1, stop_order=1).first()
         if first_stop:
-            GPSLog.objects.get_or_create(
-                bus=buses[0],
-                latitude=first_stop.latitude,
-                longitude=first_stop.longitude,
-                speed=0.0,
-            )
+            for bus in buses:
+                GPSLog.objects.get_or_create(
+                    bus=bus,
+                    latitude=first_stop.latitude,
+                    longitude=first_stop.longitude,
+                    speed=0.0,
+                )
 
         self.stdout.write(self.style.SUCCESS(
-            "Successfully seeded TrackWay database with the real 38-stop route!"
+            "Successfully seeded TrackWay database with driver accounts (driver1, driver2, driver3) and 38-stop route!"
         ))
+

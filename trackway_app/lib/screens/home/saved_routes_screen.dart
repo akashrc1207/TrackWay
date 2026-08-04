@@ -32,7 +32,7 @@ class _SavedRoutesScreenState extends State<SavedRoutesScreen> {
 
   void _showServerConfigDialog(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    final currentUrl = prefs.getString("custom_backend_url") ?? "http://10.0.2.2:8000";
+    final currentUrl = prefs.getString("custom_backend_url") ?? "http://34.14.132.119";
     final controller = TextEditingController(text: currentUrl);
 
     if (!context.mounted) return;

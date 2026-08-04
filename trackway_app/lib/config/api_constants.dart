@@ -1,7 +1,7 @@
 class ApiConstants {
   static const String baseUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: "http://10.0.2.2:8000",
+    defaultValue: "http://34.14.132.119",
   );
 
   static const String routes = "$baseUrl/api/routes/";

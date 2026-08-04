@@ -16,34 +16,41 @@ class LocationPermissionResult {
 }
 
 Future<LocationPermissionResult> ensureLocationPermission() async {
-  final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) {
-    return const LocationPermissionResult(
+  try {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return const LocationPermissionResult(
+        granted: false,
+        errorMessage: "Location services are turned off. Please enable GPS/location on your device.",
+      );
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied) {
+      return const LocationPermissionResult(
+        granted: false,
+        errorMessage: "Location permission was denied. Please allow location access to continue.",
+      );
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return const LocationPermissionResult(
+        granted: false,
+        errorMessage:
+            "Location permission is permanently denied. Please enable it from your device's app settings.",
+      );
+    }
+
+    return const LocationPermissionResult(granted: true);
+  } catch (e) {
+    return LocationPermissionResult(
       granted: false,
-      errorMessage: "Location services are turned off. Please enable GPS/location on your device.",
+      errorMessage: "Location check error: $e",
     );
   }
-
-  LocationPermission permission = await Geolocator.checkPermission();
-
-  if (permission == LocationPermission.denied) {
-    permission = await Geolocator.requestPermission();
-  }
-
-  if (permission == LocationPermission.denied) {
-    return const LocationPermissionResult(
-      granted: false,
-      errorMessage: "Location permission was denied. Please allow location access to continue.",
-    );
-  }
-
-  if (permission == LocationPermission.deniedForever) {
-    return const LocationPermissionResult(
-      granted: false,
-      errorMessage:
-          "Location permission is permanently denied. Please enable it from your device's app settings.",
-    );
-  }
-
-  return const LocationPermissionResult(granted: true);
 }

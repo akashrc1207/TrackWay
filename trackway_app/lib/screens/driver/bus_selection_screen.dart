@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_theme.dart';
 import '../../models/bus.dart';
 import '../../services/api_service.dart';
+import '../../services/gps_broadcast_service.dart';
 import 'driver_dashboard.dart';
 import '../login/login_screen.dart';
 
@@ -30,6 +31,27 @@ class _BusSelectionScreenState extends State<BusSelectionScreen> {
   Future<void> _loadDriverAndBuses() async {
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
+
+    final activeJourney = await _apiService.getActiveJourney();
+    if (activeJourney != null && activeJourney["has_active_journey"] == true) {
+      final journeyId = int.tryParse(activeJourney["journey_id"].toString());
+      final busId = int.tryParse(activeJourney["bus_id"].toString());
+      if (journeyId != null && busId != null) {
+        await GpsBroadcastService.instance.restoreActiveSession(
+          activeJourneyId: journeyId,
+          busId: busId,
+          busName: activeJourney["bus_name"]?.toString(),
+          busNumber: activeJourney["bus_number"]?.toString(),
+          routeName: activeJourney["route_name"]?.toString(),
+        );
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const DriverDashboard()),
+        );
+        return;
+      }
+    }
+
     final savedUsername = prefs.getString("username") ?? "Driver";
     final savedBusId = prefs.getInt("selected_bus_id");
 
@@ -50,6 +72,16 @@ class _BusSelectionScreenState extends State<BusSelectionScreen> {
     await prefs.setString("bus_name", bus.busName);
     await prefs.setString("bus_number", bus.busNumber);
     await prefs.setString("route_name", bus.routeName);
+
+    // Pre-fetch and cache route terminal details for instant 0ms validation
+    try {
+      final details = await _apiService.getRouteDetails(bus.routeId);
+      if (details != null) {
+        GpsBroadcastService.instance.setCachedRouteDetails(details);
+      }
+    } catch (e) {
+      debugPrint("Pre-cache route details error: $e");
+    }
 
     if (!mounted) return;
     Navigator.of(context).pushReplacement(

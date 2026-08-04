@@ -18,8 +18,10 @@ from .serializers import (
 from .services.eta_service import infer_direction, haversine_distance
 from .services.eta_engine import ETAEngine
 from .services.bearing_calculator import calculate_bearing
+from datetime import timedelta
 from .services.tracking_config import (
-    MAX_GPS_ACCURACY_METERS, MAX_SPEED_KMH, MAX_JUMP_METERS_3SEC
+    MAX_GPS_ACCURACY_METERS, MAX_SPEED_KMH, MAX_JUMP_METERS_3SEC,
+    MAX_TERMINAL_RADIUS_METERS
 )
 from .services.telemetry import TelemetryTracker
 
@@ -227,14 +229,10 @@ def start_journey(request):
         bus_id = driver.assigned_bus.id
 
     if not bus_id:
-        default_bus = Bus.objects.first()
-        if default_bus:
-            bus_id = default_bus.id
-        else:
-            return Response(
-                {"error": "No bus specified and none available in system."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        return Response(
+            {"error": "bus_id is required to start a journey."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     try:
         bus = Bus.objects.get(id=bus_id)
@@ -244,21 +242,62 @@ def start_journey(request):
             status=status.HTTP_404_NOT_FOUND
         )
 
-    # Ensure bus is not already assigned to another driver's active journey
-    active_journey_on_bus = Journey.objects.filter(bus=bus, is_active=True).exclude(driver=driver).first()
-    if active_journey_on_bus:
+    # Reject if driver or bus already has an active journey running
+    active_journey_exists = Journey.objects.filter(Q(bus=bus) | Q(driver=driver), is_active=True).first()
+    if active_journey_exists:
         return Response(
-            {"error": "Bus already assigned to another active journey."},
+            {"error": "An active journey is already running. Please end the current journey first."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Return existing journey if already active for this driver on this bus
-    existing_journey = Journey.objects.filter(driver=driver, bus=bus, is_active=True).first()
-    if existing_journey:
-        driver.assigned_bus = bus
-        driver.save()
-        serializer = JourneySerializer(existing_journey)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    # Extract coordinates from request body with fallback to recent GPS log (<= 30s)
+    lat = request.data.get("latitude")
+    lng = request.data.get("longitude")
+
+    if lat is None or lng is None:
+        recent_log = GPSLog.objects.filter(bus=bus).order_by("-id").first()
+        if recent_log and (timezone.now() - recent_log.timestamp).total_seconds() <= 30.0:
+            lat = recent_log.latitude
+            lng = recent_log.longitude
+        else:
+            return Response(
+                {"error": "GPS location is required to verify terminal presence before starting a trip."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    lat = float(lat)
+    lng = float(lng)
+
+    # Server-Side Security Enforcement: Independent Terminal Proximity Verification
+    stops = list(BusStop.objects.filter(route=bus.route).order_by("stop_order"))
+    if not stops:
+        return Response(
+            {"error": "No terminal stops configured for this route."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    first_stop = stops[0]
+    last_stop = stops[-1]
+
+    dist_start_m = haversine_distance(lat, lng, first_stop.latitude, first_stop.longitude) * 1000.0
+    dist_end_m = haversine_distance(lat, lng, last_stop.latitude, last_stop.longitude) * 1000.0
+
+    if dist_start_m > MAX_TERMINAL_RADIUS_METERS and dist_end_m > MAX_TERMINAL_RADIUS_METERS:
+        logger.warning(
+            f"Backend security rejected journey start for Bus #{bus.id}: ({lat}, {lng}) "
+            f"is outside terminal radius (Start: {dist_start_m:.1f}m, End: {dist_end_m:.1f}m > {MAX_TERMINAL_RADIUS_METERS}m)"
+        )
+        return Response(
+            {
+                "error": "You must be at a route terminal to start a journey.",
+                "distance_start_m": round(dist_start_m),
+                "distance_end_m": round(dist_end_m),
+                "required_radius_m": round(MAX_TERMINAL_RADIUS_METERS),
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    direction = "forward" if dist_start_m <= MAX_TERMINAL_RADIUS_METERS else "reverse"
 
     # Close any lingering active journeys for this driver
     Journey.objects.filter(driver=driver, is_active=True).update(is_active=False, end_time=timezone.now())
@@ -273,7 +312,10 @@ def start_journey(request):
     )
 
     serializer = JourneySerializer(journey)
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+    data = dict(serializer.data)
+    data["direction"] = direction
+    data["start_terminal"] = first_stop.stop_name if direction == "forward" else last_stop.stop_name
+    return Response(data, status=status.HTTP_201_CREATED)
 
 
 @api_view(["POST"])
@@ -311,6 +353,50 @@ def stop_journey(request):
     )
 
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def active_journey(request):
+    """
+    Returns the active journey belonging ONLY to the authenticated driver (request.user).
+    Guarantees zero cross-contamination across drivers.
+    """
+    try:
+        driver = Driver.objects.get(user=request.user)
+    except Driver.DoesNotExist:
+        return Response(
+            {"has_active_journey": False, "error": "Driver profile not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )
+
+    journey = Journey.objects.filter(driver=driver, is_active=True).first()
+    bus = driver.assigned_bus or (journey.bus if journey else None)
+
+    if journey and bus:
+        route = bus.route
+        return Response({
+            "has_active_journey": True,
+            "journey_id": journey.id,
+            "bus_id": bus.id,
+            "bus_name": bus.bus_name,
+            "bus_number": bus.bus_number,
+            "route_id": route.id if route else None,
+            "route_name": route.route_name if route else "Assigned Route",
+            "start_time": journey.start_time.isoformat() if journey.start_time else None,
+            "driver_id": driver.id,
+            "driver_username": request.user.username,
+            "is_broadcasting": True,
+        }, status=status.HTTP_200_OK)
+
+    return Response({
+        "has_active_journey": False,
+        "journey_id": None,
+        "bus_id": None,
+        "driver_id": driver.id,
+        "driver_username": request.user.username,
+        "is_broadcasting": False,
+    }, status=status.HTTP_200_OK)
+
+
 @api_view(["POST"])
 def login_driver(request):
     username = request.data.get("username")
@@ -340,17 +426,22 @@ def login_driver(request):
 
     token, _ = Token.objects.get_or_create(user=user)
 
-    active_journey = Journey.objects.filter(driver=driver, is_active=True).first()
+    active_j = Journey.objects.filter(driver=driver, is_active=True).first()
+    bus = driver.assigned_bus or (active_j.bus if active_j else None)
 
     return Response({
         "token": token.key,
         "user_id": user.id,
         "username": user.username,
         "driver_id": driver.id,
-        "bus_id": driver.assigned_bus.id if driver.assigned_bus else None,
-        "bus_name": driver.assigned_bus.bus_name if driver.assigned_bus else "",
-        "bus_number": driver.assigned_bus.bus_number if driver.assigned_bus else None,
-        "active_journey_id": active_journey.id if active_journey else None,
+        "has_active_journey": (active_j is not None and bus is not None),
+        "bus_id": bus.id if bus else None,
+        "bus_name": bus.bus_name if bus else "",
+        "bus_number": bus.bus_number if bus else None,
+        "route_id": bus.route.id if (bus and bus.route) else None,
+        "route_name": bus.route.route_name if (bus and bus.route) else "",
+        "active_journey_id": active_j.id if active_j else None,
+        "start_time": active_j.start_time.isoformat() if (active_j and active_j.start_time) else None,
     })
 
 

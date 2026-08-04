@@ -4,14 +4,14 @@ import 'screens/login/login_screen.dart';
 
 import 'services/gps_broadcast_service.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await GpsBroadcastService.instance.init();
-  } catch (e) {
-    debugPrint("Startup initialization error: $e");
-  }
   runApp(const TrackWayApp());
+  
+  // Asynchronously initialize background GPS broadcast session without blocking UI launch
+  GpsBroadcastService.instance.init().catchError((e) {
+    debugPrint("Startup initialization error: $e");
+  });
 }
 
 class TrackWayApp extends StatelessWidget {

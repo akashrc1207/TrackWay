@@ -15,7 +15,7 @@ class DriverDashboard extends StatefulWidget {
 }
 
 class _DriverDashboardState extends State<DriverDashboard> {
-  String username = "driver1";
+  String username = "Driver";
   String busName = "";
   String busNumber = "";
   String routeName = "";
@@ -40,15 +40,228 @@ class _DriverDashboardState extends State<DriverDashboard> {
   }
 
   Future<void> _loadDriverInfo() async {
-    await GpsBroadcastService.instance.init();
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
-      username = prefs.getString("username") ?? "driver1";
+      username = prefs.getString("username") ?? "Driver";
       busName = prefs.getString("bus_name") ?? "";
       busNumber = prefs.getString("bus_number") ?? "";
       routeName = prefs.getString("route_name") ?? "";
     });
+    await GpsBroadcastService.instance.init();
+    if (!mounted) return;
+    setState(() {
+      username = prefs.getString("username") ?? "Driver";
+      busName = prefs.getString("bus_name") ?? "";
+      busNumber = prefs.getString("bus_number") ?? "";
+      routeName = prefs.getString("route_name") ?? "";
+    });
+  }
+
+  void _showOutOfBoundsDialog(Map<String, dynamic> v) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.gpp_bad_rounded, color: Colors.redAccent, size: 28),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "Terminal Presence Required",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "You must be at a route terminal to start a trip.",
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "📍 Start Terminal: ${v['firstStop'] ?? 'Terminal 1'}",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
+                  ),
+                  Text(
+                    "Current Distance: ${v['distToFirst'] ?? 'N/A'} m",
+                    style: const TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "📍 End Terminal: ${v['lastStop'] ?? 'Terminal 2'}",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
+                  ),
+                  Text(
+                    "Current Distance: ${v['distToLast'] ?? 'N/A'} m",
+                    style: const TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    "Required Radius: ${v['requiredRadius'] ?? 150} m",
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.lightbulb_rounded, color: Colors.amber, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Tip: Move closer to the terminal before starting.",
+                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E), fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryEmerald,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("OK, Got It"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTripConfirmationDialog(Map<String, dynamic> v, int? busId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.verified_user_rounded, color: AppTheme.primaryEmerald, size: 28),
+            SizedBox(width: 10),
+            Text("Confirm Trip Launch", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppTheme.mintContainer,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.primaryEmerald.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.directions_bus_rounded, color: AppTheme.primaryEmerald, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          busName.isNotEmpty ? "$busName ($busNumber)" : busNumber,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.alt_route_rounded, color: AppTheme.primaryEmerald, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          routeName.isNotEmpty ? routeName : "Assigned Route",
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  Text(
+                    "✓ Verified Terminal: ${v['terminalName']}",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryEmeraldDark),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "🧭 Direction: ${v['directionLabel']}",
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textPrimary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "📏 Distance: ${v['distMeters']} m  (GPS Accuracy: ±${v['accuracy']} m)",
+                    style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryEmerald,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final result = await GpsBroadcastService.instance.startBroadcast(
+                busId: busId,
+                position: v['currentPosition'],
+                direction: v['direction'],
+              );
+
+              if (!mounted) return;
+              if (result["success"] != true) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result["error"] ?? "Could not start journey session"),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
+            },
+            child: const Text("Confirm & Start"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -222,18 +435,26 @@ class _DriverDashboardState extends State<DriverDashboard> {
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   if (!tripStarted) {
-                    final result = await broadcastService.startBroadcast();
+                    final validation = await broadcastService.validateTerminalProximity();
 
-                    if (result["success"] != true) {
-                      if (!mounted) return;
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(result["error"] ?? "Could not start journey session"),
-                          backgroundColor: Colors.redAccent,
-                        ),
-                      );
+                    if (!mounted) return;
+                    if (validation["valid"] != true) {
+                      if (validation["reason"] == "out_of_bounds") {
+                        _showOutOfBoundsDialog(validation);
+                      } else {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(validation["error"] ?? "Validation failed"),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
                       return;
                     }
+
+                    final prefs = await SharedPreferences.getInstance();
+                    final busId = prefs.getInt("selected_bus_id");
+                    _showTripConfirmationDialog(validation, busId);
                   } else {
                     final stopped = await broadcastService.stopBroadcast();
                     if (!stopped) {
@@ -245,14 +466,15 @@ class _DriverDashboardState extends State<DriverDashboard> {
                     }
 
                     // Clear selected bus and return to BusSelectionScreen
-                    final nav = Navigator.of(context);
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.remove("selected_bus_id");
                     await prefs.remove("bus_name");
                     await prefs.remove("bus_number");
                     await prefs.remove("route_name");
 
-                    nav.pushReplacement(
+                    if (!context.mounted) return;
+                    Navigator.pushReplacement(
+                      context,
                       MaterialPageRoute(builder: (_) => const BusSelectionScreen()),
                     );
                   }

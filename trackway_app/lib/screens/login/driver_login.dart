@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../services/gps_broadcast_service.dart';
 import '../driver/bus_selection_screen.dart';
+import '../driver/driver_dashboard.dart';
 
 class DriverLogin extends StatefulWidget {
   const DriverLogin({super.key});
@@ -46,7 +48,7 @@ class _DriverLoginState extends State<DriverLogin> {
 
   void _showServerConfigDialog(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    final currentUrl = prefs.getString("custom_backend_url") ?? "http://10.0.2.2:8000";
+    final currentUrl = prefs.getString("custom_backend_url") ?? "http://34.14.132.119";
     final controller = TextEditingController(text: currentUrl);
 
     if (!context.mounted) return;
@@ -128,7 +130,42 @@ class _DriverLoginState extends State<DriverLogin> {
       await prefs.setBool("remember_driver", _rememberMe);
       await prefs.setString("username", username);
 
+      debugPrint("[DEBUG_LOG] LOGIN SUCCESS");
+      debugPrint("[DEBUG_LOG] Calling /api/journey/active/");
+      final activeJourney = await _apiService.getActiveJourney();
+      debugPrint("[DEBUG_LOG] Server Response: $activeJourney");
+
+      if (activeJourney != null && activeJourney["has_active_journey"] == true) {
+        final parsedJourneyId = activeJourney["journey_id"] != null
+            ? int.tryParse(activeJourney["journey_id"].toString())
+            : null;
+        final parsedBusId = activeJourney["bus_id"] != null
+            ? int.tryParse(activeJourney["bus_id"].toString())
+            : null;
+
+        if (parsedJourneyId != null && parsedBusId != null) {
+          debugPrint("[DEBUG_LOG] restoreActiveSession()");
+          await GpsBroadcastService.instance.restoreActiveSession(
+            activeJourneyId: parsedJourneyId,
+            busId: parsedBusId,
+            busName: activeJourney["bus_name"]?.toString(),
+            busNumber: activeJourney["bus_number"]?.toString(),
+            routeName: activeJourney["route_name"]?.toString(),
+          );
+
+          debugPrint("[DEBUG_LOG] Navigation Decision: Open DriverDashboard");
+          if (!mounted) return;
+          debugPrint("[DEBUG_LOG] Final Screen: DriverDashboard");
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const DriverDashboard()),
+          );
+          return;
+        }
+      }
+
+      debugPrint("[DEBUG_LOG] Navigation Decision: Open BusSelectionScreen");
       if (!mounted) return;
+      debugPrint("[DEBUG_LOG] Final Screen: BusSelectionScreen");
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const BusSelectionScreen()),
       );

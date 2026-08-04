@@ -20,3 +20,7 @@ EMA_ALPHA = 0.35
 
 # Cache timeout for smoothed ETA store (seconds)
 ETA_CACHE_TIMEOUT_SEC = 3600
+
+# Maximum allowable distance in meters from a route terminal to start a journey
+MAX_TERMINAL_RADIUS_METERS = 150.0
+

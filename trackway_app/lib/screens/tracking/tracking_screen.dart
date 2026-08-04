@@ -42,7 +42,7 @@ class _TrackingScreenState extends State<TrackingScreen> with SingleTickerProvid
         return ValueListenableBuilder<String?>(
           valueListenable: _engine.errorMessageNotifier,
           builder: (context, errorMsg, _) {
-            if (isLoading || _engine.gpsLocationNotifier.value == null || _engine.etaDataNotifier.value == null) {
+            if (isLoading) {
               return Scaffold(
                 backgroundColor: AppTheme.bgMint,
                 appBar: AppBar(title: Text("Tracking Bus #${widget.busId}")),
