@@ -13,10 +13,19 @@ class BusSerializer(serializers.ModelSerializer):
     start_location = serializers.CharField(source="route.start_location", read_only=True)
     end_location = serializers.CharField(source="route.end_location", read_only=True)
     status = serializers.SerializerMethodField()
+    active_journey = serializers.SerializerMethodField()
+    active_journey_id = serializers.SerializerMethodField()
 
     def get_status(self, obj):
         has_active_journey = Journey.objects.filter(bus=obj, is_active=True).exists()
         return "Active" if has_active_journey else "Inactive"
+
+    def get_active_journey(self, obj):
+        return Journey.objects.filter(bus=obj, is_active=True).exists()
+
+    def get_active_journey_id(self, obj):
+        j = Journey.objects.filter(bus=obj, is_active=True).first()
+        return j.id if j else None
 
     class Meta:
         model = Bus

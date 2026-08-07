@@ -310,8 +310,10 @@ class _BusSelectionScreenState extends State<BusSelectionScreen> {
                                           // Selection Radio / Badge
                                           Radio<int>(
                                             value: bus.id,
+                                            // ignore: deprecated_member_use
                                             groupValue: _selectedBusId,
                                             activeColor: AppTheme.primaryEmerald,
+                                            // ignore: deprecated_member_use
                                             onChanged: (val) {
                                               setState(() => _selectedBusId = val);
                                             },

@@ -76,11 +76,12 @@ class ApiService {
     try {
       final response = await _dio.get("/api/gps/latest/$busId/");
       if (response.data != null) {
+        debugPrint("[TRACK_RUNTIME] getLatestGps Bus #$busId RAW: active_journey=${response.data['active_journey']}, journey_id=${response.data['journey_id']}, status=${response.data['status']}");
         return GpsLocation.fromJson(response.data);
       }
       return null;
     } catch (e) {
-      debugPrint("Get Latest GPS Error: $e");
+      debugPrint("[TRACK_RUNTIME] getLatestGps Bus #$busId Error: $e");
       return null;
     }
   }
@@ -88,9 +89,11 @@ class ApiService {
   Future<Map<String, dynamic>?> fetchBusEta(int busId) async {
     try {
       final response = await _dio.get("/api/buses/$busId/eta/");
-      return response.data as Map<String, dynamic>;
+      final data = response.data as Map<String, dynamic>;
+      debugPrint("[TRACK_RUNTIME] fetchBusEta Bus #$busId RAW: active_journey=${data['active_journey']}, journey_id=${data['journey_id']}, status=${data['status']}, stops=${(data['stops_eta'] as List?)?.length ?? 0}, polyline=${(data['travelled_polyline'] as List?)?.length ?? 0}");
+      return data;
     } catch (e) {
-      debugPrint("Fetch Bus ETA Error: $e");
+      debugPrint("[TRACK_RUNTIME] fetchBusEta Bus #$busId Error: $e");
       return null;
     }
   }
@@ -99,6 +102,8 @@ class ApiService {
     required double latitude,
     required double longitude,
     required double speed,
+    double? accuracy,
+    double? heading,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString("token");
@@ -109,9 +114,17 @@ class ApiService {
     }
 
     try {
+      final data = <String, dynamic>{
+        "latitude": latitude,
+        "longitude": longitude,
+        "speed": speed,
+      };
+      if (accuracy != null) data["accuracy"] = accuracy;
+      if (heading != null) data["heading"] = heading;
+
       final response = await _dio.post(
         "/api/gps/update/",
-        data: {"latitude": latitude, "longitude": longitude, "speed": speed},
+        data: data,
         options: Options(headers: {"Authorization": "Token $token"}),
       );
 
@@ -159,6 +172,10 @@ class ApiService {
         options: Options(headers: {"Authorization": "Token $token"}),
       );
 
+      if (response.data != null && response.data["start_time"] != null) {
+        await prefs.setString("journey_start_time", response.data["start_time"].toString());
+      }
+
       return {
         "success": true,
         "id": response.data["id"],
@@ -193,7 +210,11 @@ class ApiService {
         options: Options(headers: {"Authorization": "Token $token"}),
       );
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        await prefs.remove("journey_start_time");
+        return true;
+      }
+      return false;
     } on DioException catch (e) {
       debugPrint("Stop Journey Error: ${e.response?.data}");
       return false;
@@ -241,6 +262,7 @@ class ApiService {
           if (data["route_name"] != null) await prefs.setString("route_name", data["route_name"].toString());
           if (data["bus_id"] != null) await prefs.setInt("selected_bus_id", int.parse(data["bus_id"].toString()));
           if (data["journey_id"] != null) await prefs.setInt("active_journey_id", int.parse(data["journey_id"].toString()));
+          if (data["start_time"] != null) await prefs.setString("journey_start_time", data["start_time"].toString());
           await prefs.setBool("is_broadcasting", true);
         }
         return data;

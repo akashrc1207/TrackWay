@@ -61,6 +61,8 @@ class ETAServiceTest(TestCase):
 class BusETAApiTest(TestCase):
 
     def setUp(self):
+        from django.contrib.auth.models import User
+        from .models import Driver, Journey
         self.client = APIClient()
         self.route = Route.objects.create(
             route_name="Thaliparamba - Cherupuzha",
@@ -88,8 +90,12 @@ class BusETAApiTest(TestCase):
             route=self.route,
             stop_order=17
         )
+        self.user = User.objects.create_user(username="driver_eta", password="pass")
+        self.driver = Driver.objects.create(user=self.user, phone="+919999999999", assigned_bus=self.bus)
+        self.journey = Journey.objects.create(bus=self.bus, driver=self.driver, is_active=True)
         self.gps = GPSLog.objects.create(
             bus=self.bus,
+            journey=self.journey,
             latitude=12.037135,
             longitude=75.360110,
             speed=25.5
@@ -302,4 +308,107 @@ class ConcurrentMultiBusTest(TestCase):
         self.assertEqual(res2_final["bus_id"], self.busB.id)
         self.assertEqual(res2_final["bus_name"], "Holy Angel")
         self.assertEqual(res2_final["driver_username"], "driver2")
+
+
+class InactiveBusStateTest(TestCase):
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from .models import Driver, Journey
+        self.client = APIClient()
+        self.route = Route.objects.create(
+            route_name="Thaliparamba - Cherupuzha",
+            start_location="Thaliparamba",
+            end_location="Cherupuzha",
+            total_distance=45.0
+        )
+        self.stop1 = BusStop.objects.create(route=self.route, stop_order=1, stop_name="Thaliparamba", latitude=12.0369964, longitude=75.3600476)
+        self.stop38 = BusStop.objects.create(route=self.route, stop_order=38, stop_name="Cherupuzha", latitude=12.2746351, longitude=75.3637389)
+
+        self.bus1 = Bus.objects.create(bus_name="Bus 1", bus_number="KL-59-A-1001", route=self.route)
+        self.bus2 = Bus.objects.create(bus_name="Bus 2", bus_number="KL-59-B-2002", route=self.route)
+
+        self.user1 = User.objects.create_user(username="drv1", password="password")
+        self.driver1 = Driver.objects.create(user=self.user1, phone="+919111111111")
+
+        # Create past completed journey and GPS log for Bus 1
+        past_j = Journey.objects.create(bus=self.bus1, driver=self.driver1, is_active=False)
+        GPSLog.objects.create(bus=self.bus1, journey=past_j, latitude=12.04, longitude=75.37, speed=30.0)
+
+    def test_inactive_bus_latest_gps_returns_inactive(self):
+        res = self.client.get(reverse("latest-gps", kwargs={"bus_id": self.bus1.id}))
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        self.assertFalse(data["active_journey"])
+        self.assertIsNone(data["journey_id"])
+        self.assertEqual(data["status"], "inactive")
+
+    def test_inactive_bus_eta_returns_empty_polylines_and_inactive(self):
+        res = self.client.get(reverse("bus-eta", kwargs={"bus_id": self.bus1.id}))
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        self.assertFalse(data["active_journey"])
+        self.assertEqual(data["status"], "inactive")
+        self.assertEqual(data["stops_eta"], [])
+        self.assertEqual(data["travelled_polyline"], [])
+        self.assertEqual(data["remaining_polyline"], [])
+        self.assertIsNone(data["next_stop"])
+
+    def test_journey_lifecycle_and_transition(self):
+        driver_client = APIClient()
+        driver_client.force_authenticate(user=self.user1)
+
+        # 1. Start journey
+        res_start = driver_client.post(
+            reverse("start-journey"),
+            {"bus_id": self.bus1.id, "latitude": 12.0369964, "longitude": 75.3600476},
+            format="json"
+        )
+        self.assertEqual(res_start.status_code, status.HTTP_201_CREATED)
+        j1_id = res_start.json()["id"]
+
+        # 2. Verify active state
+        res_eta_active = self.client.get(reverse("bus-eta", kwargs={"bus_id": self.bus1.id})).json()
+        self.assertTrue(res_eta_active["active_journey"])
+        self.assertEqual(res_eta_active["journey_id"], j1_id)
+
+        # 3. Stop journey
+        res_stop = driver_client.post(reverse("stop-journey"))
+        self.assertEqual(res_stop.status_code, status.HTTP_200_OK)
+
+        # 4. Verify immediate return to inactive
+        res_eta_stopped = self.client.get(reverse("bus-eta", kwargs={"bus_id": self.bus1.id})).json()
+        self.assertFalse(res_eta_stopped["active_journey"])
+        self.assertEqual(res_eta_stopped["status"], "inactive")
+
+        # 5. Start a second journey
+        res_start2 = driver_client.post(
+            reverse("start-journey"),
+            {"bus_id": self.bus1.id, "latitude": 12.0369964, "longitude": 75.3600476},
+            format="json"
+        )
+        self.assertEqual(res_start2.status_code, status.HTTP_201_CREATED)
+        j2_id = res_start2.json()["id"]
+        self.assertNotEqual(j1_id, j2_id)
+
+    def test_multi_bus_isolation_active_inactive(self):
+        driver_client = APIClient()
+        driver_client.force_authenticate(user=self.user1)
+
+        # Start journey on Bus 2 (Bus 1 remains inactive)
+        driver_client.post(
+            reverse("start-journey"),
+            {"bus_id": self.bus2.id, "latitude": 12.0369964, "longitude": 75.3600476},
+            format="json"
+        )
+
+        res_bus1 = self.client.get(reverse("bus-eta", kwargs={"bus_id": self.bus1.id})).json()
+        res_bus2 = self.client.get(reverse("bus-eta", kwargs={"bus_id": self.bus2.id})).json()
+
+        self.assertFalse(res_bus1["active_journey"])
+        self.assertEqual(res_bus1["status"], "inactive")
+
+        self.assertTrue(res_bus2["active_journey"])
+        self.assertIsNotNone(res_bus2["journey_id"])
+
 

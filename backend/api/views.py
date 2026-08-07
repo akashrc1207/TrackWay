@@ -19,6 +19,7 @@ from .services.eta_service import infer_direction, haversine_distance
 from .services.eta_engine import ETAEngine
 from .services.bearing_calculator import calculate_bearing
 from datetime import timedelta
+from .services.journey_state_engine import load_road_polyline, snap_point_to_polyline
 from .services.tracking_config import (
     MAX_GPS_ACCURACY_METERS, MAX_SPEED_KMH, MAX_JUMP_METERS_3SEC,
     MAX_TERMINAL_RADIUS_METERS
@@ -60,15 +61,30 @@ def gps_list(request):
 @api_view(["GET"])
 def latest_gps(request, bus_id):
     active_journey = Journey.objects.filter(bus_id=bus_id, is_active=True).order_by("-id").first()
-    if active_journey:
-        recent_logs = list(GPSLog.objects.filter(bus_id=bus_id, journey=active_journey).order_by("-id")[:2])
-    else:
-        recent_logs = list(GPSLog.objects.filter(bus_id=bus_id).order_by("-id")[:2])
+    if not active_journey:
+        return Response(
+            {
+                "bus_id": bus_id,
+                "active_journey": False,
+                "journey_id": None,
+                "status": "inactive",
+                "message": "Bus is currently inactive",
+            },
+            status=status.HTTP_200_OK
+        )
 
+    recent_logs = list(GPSLog.objects.filter(bus_id=bus_id, journey=active_journey).order_by("-id")[:2])
     if not recent_logs:
         return Response(
-            {"error": "No GPS data found"},
-            status=status.HTTP_404_NOT_FOUND
+            {
+                "bus_id": bus_id,
+                "active_journey": True,
+                "journey_id": active_journey.id,
+                "status": "stale",
+                "signal_status": "stale",
+                "message": "No GPS data for active journey yet",
+            },
+            status=status.HTTP_200_OK
         )
 
     gps = recent_logs[0]
@@ -83,8 +99,17 @@ def latest_gps(request, bus_id):
     signal_status = ETAEngine.get_signal_status(gps.timestamp)
     serializer = GPSLogSerializer(gps)
     data = dict(serializer.data)
+    data["active_journey"] = True
+    data["journey_id"] = active_journey.id
     data["bearing"] = bearing
     data["signal_status"] = signal_status
+    data["status"] = signal_status
+
+    # Include snapped road coordinates for visual map alignment
+    polyline = load_road_polyline()
+    snapped_lat, snapped_lng, _, _ = snap_point_to_polyline(gps.latitude, gps.longitude, polyline)
+    data["snapped_latitude"] = snapped_lat
+    data["snapped_longitude"] = snapped_lng
     return Response(data)
 
 @api_view(["POST"])
@@ -299,6 +324,13 @@ def start_journey(request):
 
     direction = "forward" if dist_start_m <= MAX_TERMINAL_RADIUS_METERS else "reverse"
 
+    # Clear stale cached direction/segment state for new journey
+    from django.core.cache import cache
+    cache.delete(f"trackway:direction:bus_{bus.id}")
+    cache.delete(f"trackway:terminus_dwell:bus_{bus.id}")
+    for seq in range(1, 40):
+        cache.delete(f"trackway:eta:bus_{bus.id}:stop_{seq}")
+
     # Close any lingering active journeys for this driver
     Journey.objects.filter(driver=driver, is_active=True).update(is_active=False, end_time=timezone.now())
 
@@ -451,17 +483,49 @@ from .services.journey_state_engine import SynchronizedJourneyEngine
 def get_bus_eta(request, bus_id):
     bus = get_object_or_404(Bus, id=bus_id)
     active_journey = Journey.objects.filter(bus=bus, is_active=True).order_by("-id").first()
-    if active_journey:
-        latest_log = GPSLog.objects.filter(bus=bus, journey=active_journey).order_by("-id").first()
-        recent_logs = list(GPSLog.objects.filter(bus=bus, journey=active_journey).order_by("-id")[:6])
-    else:
-        latest_log = GPSLog.objects.filter(bus=bus).order_by("-id").first()
-        recent_logs = list(GPSLog.objects.filter(bus=bus).order_by("-id")[:6])
+    if not active_journey:
+        return Response(
+            {
+                "bus_id": bus.id,
+                "bus_name": bus.bus_name,
+                "bus_number": bus.bus_number,
+                "route_id": bus.route.id if bus.route else None,
+                "route_name": bus.route.route_name if bus.route else "",
+                "active_journey": False,
+                "journey_id": None,
+                "status": "inactive",
+                "signal_status": "inactive",
+                "message": "This bus is currently not running any journey.",
+                "stops_eta": [],
+                "travelled_polyline": [],
+                "remaining_polyline": [],
+                "next_stop": None,
+            },
+            status=status.HTTP_200_OK
+        )
+
+    latest_log = GPSLog.objects.filter(bus=bus, journey=active_journey).order_by("-id").first()
+    recent_logs = list(GPSLog.objects.filter(bus=bus, journey=active_journey).order_by("-id")[:6])
 
     if not latest_log:
         return Response(
-            {"error": "No live GPS location available for this bus"},
-            status=status.HTTP_404_NOT_FOUND
+            {
+                "bus_id": bus.id,
+                "bus_name": bus.bus_name,
+                "bus_number": bus.bus_number,
+                "route_id": bus.route.id if bus.route else None,
+                "route_name": bus.route.route_name if bus.route else "",
+                "active_journey": True,
+                "journey_id": active_journey.id,
+                "status": "stale",
+                "signal_status": "stale",
+                "message": "Waiting for live GPS location signal",
+                "stops_eta": [],
+                "travelled_polyline": [],
+                "remaining_polyline": [],
+                "next_stop": None,
+            },
+            status=status.HTTP_200_OK
         )
 
     gps_points = [(log.latitude, log.longitude) for log in reversed(recent_logs)]
@@ -482,6 +546,9 @@ def get_bus_eta(request, bus_id):
         stops=stops,
         recent_logs=recent_logs,
     )
+    state["active_journey"] = True
+    state["journey_id"] = active_journey.id
+    state["status"] = state.get("signal_status", "live")
 
     return Response(state)
 
