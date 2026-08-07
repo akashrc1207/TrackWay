@@ -26,6 +26,32 @@ class GpsLocation {
   });
 
   factory GpsLocation.fromJson(Map<String, dynamic> json) {
+    // If the backend explicitly sends active_journey, use it directly (new backend format).
+    // If absent (old cloud backend), infer from GPS timestamp freshness:
+    //   - GPS < 10 minutes old  → bus is actively broadcasting → treat as ACTIVE
+    //   - GPS ≥ 10 minutes old  → driver stopped broadcasting → treat as INACTIVE
+    // The driver GPS broadcast service uploads every 2-3 seconds while running.
+    // A 10-minute-stale GPS means the bus definitely stopped its journey.
+    final bool? explicitActiveJourney = json["active_journey"] as bool?;
+    final bool activeJourney;
+    if (explicitActiveJourney != null) {
+      activeJourney = explicitActiveJourney;
+    } else {
+      final ts = (json["timestamp"] as String?) ?? "";
+      bool inferred = false; // mutable local to avoid final-in-try-catch error
+      if (ts.isNotEmpty) {
+        try {
+          final dt = DateTime.parse(ts).toUtc();
+          final elapsedSec = DateTime.now().toUtc().difference(dt).inSeconds;
+          // 600 seconds = 10 minutes. Fresh GPS = active bus.
+          inferred = elapsedSec < 600;
+        } catch (_) {
+          inferred = false;
+        }
+      }
+      activeJourney = inferred;
+    }
+
     return GpsLocation(
       latitude: (json["latitude"] as num? ?? 0.0).toDouble(),
       longitude: (json["longitude"] as num? ?? 0.0).toDouble(),
@@ -34,7 +60,7 @@ class GpsLocation {
       timestamp: (json["timestamp"] as String?) ?? "",
       snappedLatitude: (json["snapped_latitude"] as num?)?.toDouble(),
       snappedLongitude: (json["snapped_longitude"] as num?)?.toDouble(),
-      activeJourney: (json["active_journey"] as bool?) ?? false,
+      activeJourney: activeJourney,
       journeyId: (json["journey_id"] as num?)?.toInt(),
       status: (json["status"] as String?) ?? "live",
     );

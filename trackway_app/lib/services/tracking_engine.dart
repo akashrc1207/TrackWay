@@ -197,25 +197,51 @@ class TrackingEngine {
 
   Future<void> pollEtaUpdate() async {
     try {
-      final eta = await _apiService.fetchBusEta(busId);
+      final Map<String, dynamic>? etaNullable = await _apiService.fetchBusEta(busId);
 
-      // Require explicit active_journey == true. Treat null/missing/false as inactive.
-      // Old backend versions don't send active_journey — must default to inactive.
-      final etaActiveJourney = (eta?["active_journey"] as bool?) == true;
-
-      if (eta == null || !etaActiveJourney) {
+      // Guard: null response = inactive
+      if (etaNullable == null) {
         etaDataNotifier.value = null;
         travelledPolylineNotifier.value = [];
         remainingPolylineNotifier.value = [];
-        // Only set inactive if GPS poll also hasn't confirmed active journey
-        if (activeJourneyNotifier.value == true && gpsLocationNotifier.value?.activeJourney != true) {
-          activeJourneyNotifier.value = false;
-          signalStatusNotifier.value = "inactive";
-        } else if (!etaActiveJourney && gpsLocationNotifier.value?.activeJourney != true) {
+        if (gpsLocationNotifier.value?.activeJourney != true) {
           activeJourneyNotifier.value = false;
           signalStatusNotifier.value = "inactive";
         }
-        debugPrint("[TRACK_RUNTIME] pollEtaUpdate Bus #$busId => active_journey=false/null -> cleared ETA state");
+        debugPrint("[TRACK_RUNTIME] pollEtaUpdate Bus #$busId => ETA response null -> inactive");
+        return;
+      }
+
+      // eta is now guaranteed non-null for the rest of this function
+      final eta = etaNullable;
+
+      // Determine if this ETA response represents an active journey.
+      // New backend: explicit active_journey field present → use it directly.
+      // Old backend: no active_journey field → defer to GPS poll verdict.
+      //   The GPS poll uses GPS timestamp freshness to infer active state,
+      //   so we trust it as the authority rather than guessing from ETA data alone.
+      final bool? explicitActive = eta["active_journey"] as bool?;
+      final bool etaActiveJourney;
+      if (explicitActive != null) {
+        // New backend: use the explicit field
+        etaActiveJourney = explicitActive;
+        debugPrint("[TRACK_RUNTIME] pollEtaUpdate Bus #$busId => active_journey=$etaActiveJourney (explicit from backend)");
+      } else {
+        // Old backend: no active_journey key → follow the GPS poll's decision
+        etaActiveJourney = activeJourneyNotifier.value;
+        debugPrint("[TRACK_RUNTIME] pollEtaUpdate Bus #$busId => active_journey absent, deferring to GPS: $etaActiveJourney");
+      }
+
+      if (!etaActiveJourney) {
+        etaDataNotifier.value = null;
+        travelledPolylineNotifier.value = [];
+        remainingPolylineNotifier.value = [];
+        // Only set inactive signal if GPS also confirms inactive
+        if (gpsLocationNotifier.value?.activeJourney != true) {
+          activeJourneyNotifier.value = false;
+          signalStatusNotifier.value = "inactive";
+        }
+        debugPrint("[TRACK_RUNTIME] pollEtaUpdate Bus #$busId => inactive -> cleared ETA/polyline state");
         return;
       }
 
@@ -233,7 +259,7 @@ class TrackingEngine {
       activeJourneyNotifier.value = true;
       etaDataNotifier.value = eta;
       if (eta["signal_status"] != null) {
-        signalStatusNotifier.value = eta["signal_status"];
+        signalStatusNotifier.value = eta["signal_status"] as String;
       }
       _updatePolylineFromState(eta);
 
