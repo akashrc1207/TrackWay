@@ -43,8 +43,12 @@ class GpsLocation {
         try {
           final dt = DateTime.parse(ts).toUtc();
           final elapsedSec = DateTime.now().toUtc().difference(dt).inSeconds;
-          // 600 seconds = 10 minutes. Fresh GPS = active bus.
-          inferred = elapsedSec < 600;
+          // If GPS is within the "lost" threshold (default 45s), the driver's broadcast
+          // service is still (or was just recently) running — treat as ACTIVE.
+          // When the driver stops a journey, stopBroadcast() cancels the GPS upload timer
+          // immediately. After signalLostThresholdSec seconds with no new upload, this
+          // correctly transitions the passenger screen to INACTIVE.
+          inferred = elapsedSec <= AppConfig.signalLostThresholdSec;
         } catch (_) {
           inferred = false;
         }
